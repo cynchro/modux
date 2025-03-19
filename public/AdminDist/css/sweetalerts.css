@@ -1,0 +1,54 @@
+    /* Estilos personalizados para SweetAlert en modo oscuro */
+    .swal-modal {
+        background-color: #2c2c2c !important;
+        color: #ffffff !important;
+        border: 1px solid #444444;
+    }
+
+    .swal-title {
+        color: #ffffff !important;
+    }
+
+    .swal-text {
+        color: #bbbbbb !important;
+    }
+
+    .swal-button {
+        background-color: #444444 !important;
+        color: #ffffff !important;
+        border: none;
+    }
+
+    .swal-button:hover {
+        background-color: #555555 !important;
+    }
+
+    .swal-button--cancel {
+        background-color: #666666 !important;
+        color: #ffffff !important;
+    }
+
+    .swal-button--cancel:hover {
+        background-color: #777777 !important;
+    }
+
+    .swal-icon--warning {
+        border-color: #ffa726 !important;
+        color: #ffa726 !important;
+    }
+
+    .swal-icon--success:before {
+        background-color: #2c2c2c00 !important;
+    }
+
+    .swal-icon--success:after {
+        background-color: #2c2c2c00 !important;
+    }
+
+    .swal-icon--success__hide-corners {
+        background-color: #2c2c2c00 !important;
+    }
+
+    .swal-footer {
+        text-align: center;
+    }

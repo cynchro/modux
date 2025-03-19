@@ -1,0 +1,142 @@
+#!/usr/bin/env php
+<?php
+
+if ($argc < 3 || $argv[1] !== 'generate:module') {
+    echo "Uso: php monolito generate:module NombreDelModulo\n";
+    exit(1);
+}
+
+$moduleName = ucfirst($argv[2]); // Convertir la primera letra a mayúscula
+$basePath = __DIR__ . '/../../app/Modules/';
+$modulePath = $basePath . $moduleName . '/';
+
+// Crear estructura de carpetas
+$folders = [
+    $modulePath,
+    $modulePath . 'Controllers/',
+    $modulePath . 'Repositories/',
+    $modulePath . 'Services/',
+];
+
+$controllerContent = <<<PHP
+<?php
+
+namespace App\Modules\\$moduleName\Controllers;
+
+use App\Helpers\ResponseHelper;
+use App\Modules\\$moduleName\Services\\{$moduleName}Service;
+
+class {$moduleName}Controller
+{
+    public function index() {
+        \$service = new {$moduleName}Service;
+        try {
+            \$response = \$service->getAll();
+            ResponseHelper::success(\$response);
+        } catch (\Exception \$e) {
+            ResponseHelper::error(\$e->getMessage());
+        }
+    }
+
+    public function show() {
+        \$service = new {$moduleName}Service;
+        try {
+            \$response = \$service->get();
+            ResponseHelper::success(\$response);
+        } catch (\Exception \$e) {
+            ResponseHelper::error(\$e->getMessage());
+        }
+    }
+
+    public function create() {
+        \$service = new {$moduleName}Service;
+        try {
+            \$response = \$service->create();
+            ResponseHelper::success(\$response);
+        } catch (\Exception \$e) {
+            ResponseHelper::error(\$e->getMessage());
+        }
+    }
+
+    public function update() {
+        \$service = new {$moduleName}Service;
+        try {
+            \$response = \$service->update();
+            ResponseHelper::success(\$response);
+        } catch (\Exception \$e) {
+            ResponseHelper::error(\$e->getMessage());
+        }
+    }
+
+    public function delete() {
+        \$service = new {$moduleName}Service;
+        try {
+            \$service->delete();
+            ResponseHelper::success('Dato borrado con éxito');
+        } catch (\Exception \$e) {
+            ResponseHelper::error(\$e->getMessage());
+        }
+    }
+}
+
+PHP;
+
+$repositoryContent = <<<PHP
+<?php
+
+namespace App\Modules\\$moduleName\Repositories;
+
+class {$moduleName}Repository
+{
+    public static function find(): array { return []; }
+    public static function findById(): array { return []; }
+    public static function create(): array { return []; }
+    public static function update(): array { return []; }
+    public static function delete(): bool { return true; }
+}
+
+PHP;
+
+$serviceContent = <<<PHP
+<?php
+
+namespace App\Modules\\$moduleName\Services;
+
+use App\Modules\\$moduleName\Repositories\\{$moduleName}Repository;
+
+class {$moduleName}Service
+{
+    public function create(): array { return {$moduleName}Repository::create(); }
+    public function getAll(): array { return {$moduleName}Repository::find(); }
+    public function get(): array { return {$moduleName}Repository::findById(); }
+    public function update(): array { return {$moduleName}Repository::update(); }
+    public function delete(): bool { return {$moduleName}Repository::delete(); }
+}
+
+PHP;
+
+$routeContent = <<<PHP
+<?php
+
+use App\Modules\\$moduleName\Controllers\\{$moduleName}Controller;
+
+\$router->get('/$moduleName', [{$moduleName}Controller::class, 'index']);
+\$router->get('/$moduleName/{id}', [{$moduleName}Controller::class, 'show']);
+\$router->post('/$moduleName', [{$moduleName}Controller::class, 'create']);
+\$router->put('/$moduleName/{id}', [{$moduleName}Controller::class, 'update']);
+\$router->delete('/$moduleName/{id}', [{$moduleName}Controller::class, 'delete']);
+
+PHP;
+
+// Crear carpetas
+foreach ($folders as $folder) {
+    if (!is_dir($folder)) mkdir($folder, 0755, true);
+}
+
+// Crear archivos
+file_put_contents($modulePath . "Controllers/{$moduleName}Controller.php", $controllerContent);
+file_put_contents($modulePath . "Repositories/{$moduleName}Repository.php", $repositoryContent);
+file_put_contents($modulePath . "Services/{$moduleName}Service.php", $serviceContent);
+file_put_contents($modulePath . "routes.php", $routeContent);
+
+echo "Módulo $moduleName generado exitosamente en $modulePath\n";

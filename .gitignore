@@ -1,0 +1,3 @@
+/storage/logs/*
+/public/storage/logs/app.log
+.env
