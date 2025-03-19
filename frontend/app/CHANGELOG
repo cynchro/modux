@@ -1,0 +1,19 @@
+# Changelog
+Todas las modificaciones importantes a este proyecto se documentarán aquí.
+
+## [Unreleased]
+### Added
+- [2024-11-15] Nueva funcionalidad de autenticación con JWT.
+
+### Fixed
+- .
+
+### Added
+- [2024-11-15] Se agrega variables por medio de dotenv.
+- [2024-11-15] Se agregan requeridos en sucursales
+.
+### Changed
+- .
+
+### Removed
+- .

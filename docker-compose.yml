@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  uytunabackend:
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile
+    container_name: uytunabackend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./backend/src:/var/www/html
+    networks:
+      - app-network
+    depends_on:
+      - uytunadb
+      
+  uytunafrontend:
+    build:
+      context: ./frontend/
+      dockerfile: Dockerfile
+    container_name: uytunafrontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/app:/var/www/html
+    networks:
+      - app-network
+      
+  uytunadb:
+    image: mysql:8.0
+    container_name: uytunadb
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: uytuna
+      MYSQL_USER: uytuna
+      MYSQL_PASSWORD: uytuna
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  db_data:
+

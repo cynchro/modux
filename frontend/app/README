@@ -1,0 +1,19 @@
+# Agarte Admin
+
+Administrador con CORE UI.
+
+## Tabla de Contenidos
+
+- [Instalación](#instalación)
+
+---
+
+## Instalación
+
+Sigue estos pasos para instalar y configurar el proyecto en tu máquina local:
+
+1. Clonar el repositorio:
+   ```bash
+   git clone https://github.com/alexisCobax/admin_mdo.git
+
+2. Configurar las veriables de entorno (reemplazar .env.example por .env productivo)
