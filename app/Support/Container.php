@@ -2,75 +2,97 @@
 
 namespace App\Support;
 
-class Container
+use Psr\Container\ContainerInterface;
+use App\Exceptions\ContainerException;
+use App\Exceptions\NotFoundException;
+
+class Container implements ContainerInterface
 {
-    protected $instances = [];
+    private array $bindings  = [];
+    private array $singletons = [];
+    private array $instances = [];
 
-    public function set($key, $instance)
+    public function bind(string $abstract, callable $factory, bool $singleton = false): void
     {
-        $this->instances[$key] = $instance;
+        $this->bindings[$abstract]   = $factory;
+        $this->singletons[$abstract] = $singleton;
+        unset($this->instances[$abstract]);
     }
 
-    public function get($key)
+    public function singleton(string $abstract, callable $factory): void
     {
-        if (isset($this->instances[$key])) {
-            return $this->instances[$key];
+        $this->bind($abstract, $factory, true);
+    }
+
+    public function instance(string $abstract, mixed $concrete): void
+    {
+        $this->instances[$abstract] = $concrete;
+    }
+
+    public function get(string $id): mixed
+    {
+        if (isset($this->instances[$id])) {
+            return $this->instances[$id];
         }
 
-        return $this->resolve($key);
-    }
+        if (isset($this->bindings[$id])) {
+            $resolved = ($this->bindings[$id])($this);
 
-    // Método para registrar una clase en el contenedor
-    public function bind($key, $callback)
-    {
-        $this->instances[$key] = $callback;
-    }
+            if ($this->singletons[$id] ?? false) {
+                $this->instances[$id] = $resolved;
+            }
 
-    protected function resolve($key)
-    {
-        if (!class_exists($key)) {
-            throw new \Exception("Class $key does not exist");
+            return $resolved;
         }
 
-        $reflector = new \ReflectionClass($key);
+        return $this->autowire($id);
+    }
+
+    public function has(string $id): bool
+    {
+        return isset($this->instances[$id])
+            || isset($this->bindings[$id])
+            || class_exists($id);
+    }
+
+    public function make(string $class): object
+    {
+        return $this->autowire($class);
+    }
+
+    private function autowire(string $class): object
+    {
+        if (!class_exists($class)) {
+            throw new NotFoundException($class);
+        }
+
+        $reflector   = new \ReflectionClass($class);
         $constructor = $reflector->getConstructor();
 
-        if (is_null($constructor)) {
-            return new $key;
+        if ($constructor === null) {
+            return new $class();
         }
 
-        $dependencies = $this->getDependencies($constructor);
+        $dependencies = [];
+
+        foreach ($constructor->getParameters() as $param) {
+            $type = $param->getType();
+
+            if ($type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
+                $dependencies[] = $this->get($type->getName());
+                continue;
+            }
+
+            if ($param->isDefaultValueAvailable()) {
+                $dependencies[] = $param->getDefaultValue();
+                continue;
+            }
+
+            throw new ContainerException(
+                "Cannot resolve parameter [{$param->getName()}] in [{$class}]."
+            );
+        }
 
         return $reflector->newInstanceArgs($dependencies);
     }
-
-    protected function getDependencies($constructor)
-{
-    $dependencies = [];
-
-    foreach ($constructor->getParameters() as $parameter) {
-        $type = $parameter->getType();
-
-        if ($type !== null && !$type->isBuiltin()) {
-            $className = $type->getName();
-            $namespaceParts = explode('\\', $className);
-            $moduleName = $namespaceParts[2] ?? null;
-
-            // Si el parámetro es un Request, pasa los datos necesarios
-            if (strpos($className, 'Request') !== false && $moduleName) {
-                $inputData = json_decode(file_get_contents("php://input"), true);
-                $dependencies[] = new $className($inputData);
-            } else {
-                $dependencies[] = $this->get($className);
-            }
-        } elseif ($parameter->isDefaultValueAvailable()) {
-            $dependencies[] = $parameter->getDefaultValue();
-        } else {
-            throw new \Exception("Unable to resolve dependency for parameter: " . $parameter->getName());
-        }
-    }
-
-    return $dependencies;
 }
-}
-

@@ -2,51 +2,44 @@
 
 namespace App\Modules\Logs\Controllers;
 
+use App\Support\Request;
+use App\Support\Response;
 use App\Helpers\RenderHelper;
 use App\Modules\Logs\Services\LogService;
 
 class LogsController
 {
-    public function index()
+    public function __construct(private LogService $logService)
     {
-
-        $logService = new LogService();
-                $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-
-                $paginatedLogs = $logService->getPaginatedLogs($page);
-                $paginationData = $logService->getPaginationData();
-
-        return RenderHelper::render('logs.views.logs',['paginatedLogs'=>$paginatedLogs,'paginationData'=>$paginationData]);
     }
 
-    public function show($id)
+    public function index(Request $request): Response
     {
-        $logService = new LogService();
-        $index = isset($id) ? intval($id) : null;
-    
-        if ($index === null || !isset($logService->getPaginatedLogs(1)[$index])) {
-            header('Location: /logs');
-            exit;
+        $page           = max(1, (int) $request->input('page', 1));
+        $paginatedLogs  = $this->logService->getPaginatedLogs($page);
+        $paginationData = $this->logService->getPaginationData();
+
+        return RenderHelper::render('Logs.views.logs', [
+            'paginatedLogs'  => $paginatedLogs,
+            'paginationData' => $paginationData,
+        ]);
+    }
+
+    public function show(Request $request): Response
+    {
+        $index     = (int) $request->route('id');
+        $logDetail = $this->logService->getLogDetail($index);
+
+        if ($logDetail === null) {
+            return Response::redirect('/logs');
         }
-    
-        $logDetail = $logService->getLogDetail($index);
-    
-        return RenderHelper::render('logs.views.logsDetail', ['logDetail' => $logDetail]);
+
+        return RenderHelper::render('Logs.views.logsDetail', ['logDetail' => $logDetail]);
     }
 
-    public function delete()
+    public function deleteAll(Request $request): Response
     {
-        $logService = new LogService();
-        $logService->deleteSelectedLogs($_POST['logs'] ?? []);
-        header('Location: ' . $_SERVER['PHP_SELF']);
+        $this->logService->deleteAllLogs();
+        return Response::redirect('/logs');
     }
-
-    public function deleteAll()
-    {
-        $logService = new LogService();
-        $logService->deleteAllLogs();
-        header('Location: ' . $_SERVER['PHP_SELF']);
-    }
-
 }
-

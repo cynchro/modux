@@ -2,127 +2,54 @@
 
 namespace App\Modules\Admin\Repositories;
 
-use App\Config\Database;
-use App\Helpers\PaginatorHelper;
-use App\Helpers\LogHelper;
+use PDO;
 use PDOException;
+use App\Exceptions\NotFoundException;
 
 class RolRepository
 {
-
-    public static function find(): array
+    public function __construct(private PDO $pdo)
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT * FROM roles";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute();
-            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
     }
 
-    public static function findById(int $id): array
+    public function find(): array
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT * FROM roles WHERE id = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$id]);
-            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare('SELECT * FROM roles');
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function findRelated(int $id): array
+    public function findById(int $id): array
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT * FROM roles WHERE id = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$id]);
-            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
+        $stmt = $this->pdo->prepare('SELECT * FROM roles WHERE id = ?');
+        $stmt->execute([$id]);
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($result)) {
+            throw new NotFoundException('Rol', $id);
         }
+
+        return $result;
     }
 
-    public static function create(object $datos): array
+    public function create(string $nombre): int
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "INSERT INTO 
-                    roles 
-                    (nombre, estado) 
-                    VALUES 
-                    (?, ?)";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([
-                $datos->getNombre(),
-                $datos->getEstado()
-            ]);
-
-            $id = $connection->lastInsertId();
-
-            return self::findById($id);
-
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error en la base de datos: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare('INSERT INTO roles (nombre, estado) VALUES (?, ?)');
+        $stmt->execute([$nombre, 1]);
+        return (int) $this->pdo->lastInsertId();
     }
 
-
-
-    public static function update(object $datos): array
+    public function update(int $id, string $nombre, int $estado): bool
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "UPDATE roles 
-                    SET 
-                    nombre = ?, 
-                    estado = ?
-                   
-                    WHERE 
-                    id = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([
-                $datos->getNombre(),
-                $datos->getEstado(),
-                $datos->getId()
-            ]);
-
-            return self::findById($datos->getId());
-
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare('UPDATE roles SET nombre = ?, estado = ? WHERE id = ?');
+        $stmt->execute([$nombre, $estado, $id]);
+        return $stmt->rowCount() > 0;
     }
 
-
-    public static function delete(object $datos): bool
+    public function delete(int $id): bool
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "UPDATE                      
-                    roles 
-                    SET estado=0
-                    WHERE 
-                    id = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$datos->getId()]);
-            if (!$stmt->rowCount() > 0) {
-                return false;
-            }
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare('UPDATE roles SET estado = 0 WHERE id = ?');
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0;
     }
 }

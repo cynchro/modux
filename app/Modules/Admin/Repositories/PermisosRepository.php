@@ -2,252 +2,84 @@
 
 namespace App\Modules\Admin\Repositories;
 
-use App\Config\Database;
-use App\Helpers\PaginatorHelper;
-use App\Modules\Permisos\Filters\FindFilter;
-use App\Helpers\LogHelper;
+use PDO;
 use PDOException;
 
 class PermisosRepository
 {
-
-    public static function find(): array
+    public function __construct(private PDO $pdo)
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT * FROM permisos";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute();
-            $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            return $result ?: [];
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
     }
 
-    public static function findById($id): array
+    public function find(): array
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT * FROM permisos WHERE id = {$id}";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute();
-            $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            return $result ?: [];
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare('SELECT * FROM permisos');
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function findAvailable($id): array
+    public function findById(int $id): array
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT 
-                    permisos.id AS id_permiso, 
-                    permisos.key
-                    FROM permisos
-                    LEFT JOIN roles_permisos ON permisos.id = roles_permisos.permiso 
-                    AND roles_permisos.rol = ?
-                    WHERE roles_permisos.permiso IS NULL";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$id]);
-            $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            return $result ?: [];
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare('SELECT * FROM permisos WHERE id = ?');
+        $stmt->execute([$id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-
-    public static function findInUse(int $id): array
+    public function findAvailable(int $rolId): array
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT permisos.id AS id_permiso, permisos.key
-                    FROM permisos
-                    INNER JOIN roles_permisos ON permisos.id = roles_permisos.permiso
-                    WHERE roles_permisos.rol = ?;";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$id]);
-            $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            return $result ?: [];
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare(
+            'SELECT p.id AS id_permiso, p.key
+             FROM permisos p
+             LEFT JOIN roles_permisos rp ON p.id = rp.permiso AND rp.rol = ?
+             WHERE rp.permiso IS NULL'
+        );
+        $stmt->execute([$rolId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function asignar($rol,$permiso)
+    public function findInUse(int $rolId): array
     {
-        try{
-        $connection = Database::getConnection();
-        $SQL = "INSERT INTO 
-                roles_permisos 
-                (rol, permiso, estado) 
-                VALUES 
-                (?, ?, ?)";
-        $stmt = $connection->prepare($SQL);
-        $stmt->execute([
-            $rol,
-            $permiso,
-            2
-        ]);
-
-    } catch (PDOException $e) {
-        LogHelper::error($e);
-        throw new PDOException('Error en la base de datos: ' . $e->getMessage());
+        $stmt = $this->pdo->prepare(
+            'SELECT p.id AS id_permiso, p.key
+             FROM permisos p
+             INNER JOIN roles_permisos rp ON p.id = rp.permiso
+             WHERE rp.rol = ?'
+        );
+        $stmt->execute([$rolId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    }
-
-    public static function desasignar($rol,$permiso)
+    public function asignar(int $rolId, int $permisoId): void
     {
-        try{
-        $connection = Database::getConnection();
-        $SQL = "DELETE FROM  
-                roles_permisos
-                WHERE 
-                rol = ?
-                AND
-                permiso = ?";
-        $stmt = $connection->prepare($SQL);
-        $stmt->execute([
-            $rol,
-            $permiso
-        ]);
-
-    } catch (PDOException $e) {
-        LogHelper::error($e);
-        throw new PDOException('Error en la base de datos: ' . $e->getMessage());
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO roles_permisos (rol, permiso, estado) VALUES (?, ?, ?)'
+        );
+        $stmt->execute([$rolId, $permisoId, 2]);
     }
 
-    }
-
-    public static function create(object $request): int
+    public function desasignar(int $rolId, int $permisoId): void
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "INSERT INTO 
-                    roles 
-                    (nombre, estado) 
-                    VALUES 
-                    (?, ?)";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([
-                $request->nombre,
-                0
-            ]);
-
-             return $connection->lastInsertId();
-
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error en la base de datos: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare(
+            'DELETE FROM roles_permisos WHERE rol = ? AND permiso = ?'
+        );
+        $stmt->execute([$rolId, $permisoId]);
     }
 
-
-
-    public static function update(object $request): bool
+    public function createPermiso(string $key, string $descripcion): int
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "UPDATE roles 
-                    SET 
-                    nombre = ?, 
-                    estado = ?
-                    WHERE 
-                    id = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([
-                $request->nombre,
-                $request->estado,
-                $request->rol
-            ]);
-
-            return true;
-
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO permisos (`key`, descripcion, estado) VALUES (?, ?, ?)'
+        );
+        $stmt->execute([$key, $descripcion, 0]);
+        return (int) $this->pdo->lastInsertId();
     }
 
-    public static function createPermiso(object $request): int
+    public function updatePermiso(int $id, string $key, string $descripcion, int $estado): bool
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "INSERT INTO 
-                    permisos 
-                    (`key`, descripcion, estado) 
-                    VALUES 
-                    (?, ?, ?)";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([
-                $request->nombre,
-                $request->descripcion,
-                0
-            ]);
-
-             return $connection->lastInsertId();
-
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error en la base de datos: ' . $e->getMessage());
-        }
-    }
-
-
-
-    public static function updatePermiso(object $request): bool
-    {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "UPDATE permisos 
-                    SET 
-                    `key` = ?, 
-                    descripcion = ?,
-                    estado = ?
-                    WHERE 
-                    id = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([
-                $request->nombre,
-                $request->descripcion,
-                $request->estado,
-                $request->id
-            ]);
-
-            return true;
-
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
-    }
-
-
-    public static function delete(object $datos): bool
-    {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "UPDATE                      
-                    roles 
-                    SET estado=0
-                    WHERE 
-                    id = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$datos->getId()]);
-            if (!$stmt->rowCount() > 0) {
-                return false;
-            }
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare(
+            'UPDATE permisos SET `key` = ?, descripcion = ?, estado = ? WHERE id = ?'
+        );
+        $stmt->execute([$key, $descripcion, $estado, $id]);
+        return $stmt->rowCount() > 0;
     }
 }

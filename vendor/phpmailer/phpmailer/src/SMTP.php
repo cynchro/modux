@@ -13,7 +13,7 @@
  * @copyright 2012 - 2020 Marcus Bointon
  * @copyright 2010 - 2012 Jim Jagielski
  * @copyright 2004 - 2009 Andy Prevost
- * @license   https://www.gnu.org/licenses/old-licenses/lgpl-2.1.php GNU Lesser General Public License
+ * @license   https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html GNU Lesser General Public License
  * @note      This program is distributed in the hope that it will be useful - WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.
@@ -35,7 +35,7 @@ class SMTP
      *
      * @var string
      */
-    const VERSION = '6.9.2';
+    const VERSION = '6.12.0';
 
     /**
      * SMTP line break constant.
@@ -62,7 +62,7 @@ class SMTP
      * The maximum line length allowed by RFC 5321 section 4.5.3.1.6,
      * *excluding* a trailing CRLF break.
      *
-     * @see https://tools.ietf.org/html/rfc5321#section-4.5.3.1.6
+     * @see https://www.rfc-editor.org/rfc/rfc5321#section-4.5.3.1.6
      *
      * @var int
      */
@@ -72,7 +72,7 @@ class SMTP
      * The maximum line length allowed for replies in RFC 5321 section 4.5.3.1.5,
      * *including* a trailing CRLF line break.
      *
-     * @see https://tools.ietf.org/html/rfc5321#section-4.5.3.1.5
+     * @see https://www.rfc-editor.org/rfc/rfc5321#section-4.5.3.1.5
      *
      * @var int
      */
@@ -153,11 +153,20 @@ class SMTP
      * Whether to use VERP.
      *
      * @see https://en.wikipedia.org/wiki/Variable_envelope_return_path
-     * @see https://www.postfix.org/VERP_README.php Info on VERP
+     * @see https://www.postfix.org/VERP_README.html Info on VERP
      *
      * @var bool
      */
     public $do_verp = false;
+
+    /**
+     * Whether to use SMTPUTF8.
+     *
+     * @see https://www.rfc-editor.org/rfc/rfc6531
+     *
+     * @var bool
+     */
+    public $do_smtputf8 = false;
 
     /**
      * The timeout value for connection, in seconds.
@@ -202,7 +211,7 @@ class SMTP
      * Allowed SMTP XCLIENT attributes.
      * Must be allowed by the SMTP server. EHLO response is not checked.
      *
-     * @see https://www.postfix.org/XCLIENT_README.php
+     * @see https://www.postfix.org/XCLIENT_README.html
      *
      * @var array
      */
@@ -373,7 +382,7 @@ class SMTP
         }
         //Anything other than a 220 response means something went wrong
         //RFC 5321 says the server will wait for us to send a QUIT in response to a 554 error
-        //https://tools.ietf.org/html/rfc5321#section-3.1
+        //https://www.rfc-editor.org/rfc/rfc5321#section-3.1
         if ($responseCode === 554) {
             $this->quit();
         }
@@ -582,7 +591,7 @@ class SMTP
                 }
                 //Send encoded username and password
                 if (
-                    //Format from https://tools.ietf.org/html/rfc4616#section-2
+                    //Format from https://www.rfc-editor.org/rfc/rfc4616#section-2
                     //We skip the first field (it's forgery), so the string starts with a null byte
                     !$this->sendCommand(
                         'User & Password',
@@ -795,7 +804,7 @@ class SMTP
             //Send the lines to the server
             foreach ($lines_out as $line_out) {
                 //Dot-stuffing as per RFC5321 section 4.5.2
-                //https://tools.ietf.org/html/rfc5321#section-4.5.2
+                //https://www.rfc-editor.org/rfc/rfc5321#section-4.5.2
                 if (!empty($line_out) && $line_out[0] === '.') {
                     $line_out = '.' . $line_out;
                 }
@@ -913,7 +922,15 @@ class SMTP
      * $from. Returns true if successful or false otherwise. If True
      * the mail transaction is started and then one or more recipient
      * commands may be called followed by a data command.
-     * Implements RFC 821: MAIL <SP> FROM:<reverse-path> <CRLF>.
+     * Implements RFC 821: MAIL <SP> FROM:<reverse-path> <CRLF> and
+     * two extensions, namely XVERP and SMTPUTF8.
+     *
+     * The server's EHLO response is not checked. If use of either
+     * extensions is enabled even though the server does not support
+     * that, mail submission will fail.
+     *
+     * XVERP is documented at https://www.postfix.org/VERP_README.html
+     * and SMTPUTF8 is specified in RFC 6531.
      *
      * @param string $from Source address of this message
      *
@@ -922,10 +939,11 @@ class SMTP
     public function mail($from)
     {
         $useVerp = ($this->do_verp ? ' XVERP' : '');
+        $useSmtputf8 = ($this->do_smtputf8 ? ' SMTPUTF8' : '');
 
         return $this->sendCommand(
             'MAIL FROM',
-            'MAIL FROM:<' . $from . '>' . $useVerp,
+            'MAIL FROM:<' . $from . '>' . $useSmtputf8 . $useVerp,
             250
         );
     }
@@ -1362,6 +1380,26 @@ class SMTP
     public function getVerp()
     {
         return $this->do_verp;
+    }
+
+    /**
+     * Enable or disable use of SMTPUTF8.
+     *
+     * @param bool $enabled
+     */
+    public function setSMTPUTF8($enabled = false)
+    {
+        $this->do_smtputf8 = $enabled;
+    }
+
+    /**
+     * Get SMTPUTF8 use.
+     *
+     * @return bool
+     */
+    public function getSMTPUTF8()
+    {
+        return $this->do_smtputf8;
     }
 
     /**

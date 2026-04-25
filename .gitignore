@@ -1,3 +1,5 @@
-/storage/logs/*
-/public/storage/logs/app.log
-.env
+/vendor/
+/.env
+/storage/logs/*.log
+/.phpunit.result.cache
+/phpstan-baseline.neon

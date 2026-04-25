@@ -2,102 +2,62 @@
 
 namespace App\Modules\Usuario\Repositories;
 
+use PDO;
 use PDOException;
-use App\Config\Database;
-use App\Helpers\LogHelper;
-use App\Helpers\UserDataHelper;
 use App\Helpers\PaginatorHelper;
+use App\Exceptions\DatabaseException;
+use App\Exceptions\NotFoundException;
 
 class UsuariosRepository
 {
-
-    public static function find(): array
+    public function __construct(private PDO $pdo)
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT * FROM usuarios";
-
-            $paginator = new PaginatorHelper($connection, $SQL);
-
-            return $paginator->getPaginatedResults();
-
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error en la paginación: ' . $e->getMessage());
-        }
     }
 
-    public static function findById(int $id)
+    public function find(): array
     {
-        try {
-            $connection = Database::getConnection();
-            $stmt = $connection->prepare("SELECT * FROM usuarios WHERE id = ?");
-            $stmt->execute([$id]);
-            return $stmt->fetch(\PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $paginator = new PaginatorHelper($this->pdo, 'SELECT * FROM usuarios');
+        return $paginator->getPaginatedResults();
     }
 
-    public static function create(array $datos): bool
+    public function findById(int $id): array
     {
-        try {
-            $connection = Database::getConnection();
-            // Implementar la inserción en la tabla usuarios
-            return true;
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error en la base de datos: ' . $e->getMessage());
+        $stmt = $this->pdo->prepare('SELECT * FROM usuarios WHERE id = ?');
+        $stmt->execute([$id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$result) {
+            throw new NotFoundException('Usuario', $id);
         }
+
+        return $result;
     }
 
-    public static function update(array $datos): bool
+    public function create(array $data): bool
     {
-        try {
-            $connection = Database::getConnection();
-            // Implementar la actualización en la tabla usuarios
-            return true;
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        // Implement as needed for your domain
+        return true;
     }
 
-    public static function updateSucursal(object $datos): array
+    public function update(array $data): bool
     {
-        $user = UserDataHelper::getUserData();
-        $userId = $user['usuario_id'];
-        try {
-            $connection = Database::getConnection();
-            $SQL = "UPDATE 
-                    empleados 
-                    SET 
-                    id_sucursal = ?
-                    WHERE 
-                    id_usuario = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([
-                $datos->getId(),
-                $userId
-            ]);
-            return [true];
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        // Implement as needed for your domain
+        return true;
     }
 
-    public static function delete(int $id): bool
+    public function updateSucursal(int $userId, int $sucursalId): bool
     {
-        try {
-            $connection = Database::getConnection();
-            $stmt = $connection->prepare("DELETE FROM usuarios WHERE id = ?");
-            $stmt->execute([$id]);
-            return $stmt->rowCount() > 0;
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare(
+            'UPDATE empleados SET id_sucursal = ? WHERE id_usuario = ?'
+        );
+        $stmt->execute([$sucursalId, $userId]);
+        return $stmt->rowCount() > 0;
+    }
+
+    public function delete(int $id): bool
+    {
+        $stmt = $this->pdo->prepare('DELETE FROM usuarios WHERE id = ?');
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0;
     }
 }

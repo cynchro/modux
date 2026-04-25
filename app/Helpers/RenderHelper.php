@@ -2,128 +2,69 @@
 
 namespace App\Helpers;
 
+use App\Support\Response;
+
 class RenderHelper
 {
-    public static function render($view, $data = [])
+    public static function render(string $view, array $data = []): Response
     {
-        // Extraer las variables del arreglo asociativo
         extract($data);
-    
-        // Dividir el nombre de la vista en partes usando el punto como separador
-        $parts = explode('.', $view);
-    
-        // Asegurar que las partes estén en mayúsculas
-        $parts = array_map('ucfirst', $parts);
-    
-        // Reconstruir la ruta con las partes modificadas
+
+        $parts    = array_map('ucfirst', explode('.', $view));
         $viewPath = implode('/', $parts) . '.view.php';
+        $viewFile = dirname(__DIR__) . '/Modules/' . $viewPath;
 
-        // Construir la ruta completa de la vista, empezando desde la carpeta base del proyecto
-        $viewFile = dirname(__DIR__, 1) . '/Modules/' . $viewPath;
-
-        // Verificar que el archivo de vista existe
         if (!file_exists($viewFile)) {
-            throw new \Exception("View file not found: $viewFile");
+            throw new \RuntimeException("View file not found: {$viewFile}");
         }
-    
-        // Capturar la salida del archivo de vista
+
         ob_start();
         include $viewFile;
-        echo ob_get_clean();
+        $html = ob_get_clean();
+
+        return Response::html((string) $html);
     }
 
-//     public static function pdf($ruta, $variables = [])
-// {
-//     if (!file_exists($ruta)) {
-//         die("Error: No se encontró la plantilla HTML en $ruta.");
-//     }
-
-//     $html = file_get_contents($ruta);
-
-//     // Reemplazar las variables
-//     foreach ($variables as $key => $value) {
-//         $html = str_replace("{{{$key}}}", $value ?? '', $html); // Convertir null en cadena vacía
-//     }
-
-//     // Manejar condiciones simples
-//     $html = preg_replace_callback('/\{\{ if\((.*?)\) \}\}(.*?)\{\{ else \}\}(.*?)\{\{ endif \}\}/s', function($matches) use ($variables) {
-//         $condition = trim($matches[1]);
-//         $trueBlock = $matches[2];
-//         $falseBlock = $matches[3];
-
-//         // Evaluar la condición
-//         if (self::evaluateCondition($condition, $variables)) {
-//             return $trueBlock;
-//         } else {
-//             return $falseBlock;
-//         }
-//     }, $html);
-
-//     return $html;
-// }
-
-public static function pdf($ruta, $variables = [])
-{
-    if (!file_exists($ruta)) {
-        die("Error: No se encontró la plantilla HTML en $ruta.");
-    }
-
-    $html = file_get_contents($ruta);
-
-    // Reemplazar las variables
-    foreach ($variables as $key => $value) {
-        $html = str_replace("{{{$key}}}", $value ?? '', $html); // Convertir null en cadena vacía
-    }
-
-    // Manejar condiciones simples
-    $html = preg_replace_callback('/\{\{ if\((.*?)\) \}\}(.*?)\{\{ else \}\}(.*?)\{\{ endif \}\}/s', function($matches) use ($variables) {
-        $condition = trim($matches[1]);
-        $trueBlock = $matches[2];
-        $falseBlock = $matches[3];
-
-        // Evaluar la condición
-        if (self::evaluateCondition($condition, $variables)) {
-            return $trueBlock;
-        } else {
-            return $falseBlock;
+    public static function pdf(string $ruta, array $variables = []): string
+    {
+        if (!file_exists($ruta)) {
+            throw new \RuntimeException("Template not found: {$ruta}");
         }
-    }, $html);
 
-    return $html;
-}
+        $html = file_get_contents($ruta);
 
-private static function evaluateCondition($condition, $variables)
-{
+        foreach ($variables as $key => $value) {
+            $html = str_replace("{{{$key}}}", (string) ($value ?? ''), $html);
+        }
 
-    // Extraer la variable y el valor de la condición
-    preg_match('/(\w+)\s*([!=<>]+)\s*(.*)/', $condition, $matches);
-    if (count($matches) < 4) {
-        return false;
+        return (string) preg_replace_callback(
+            '/\{\{ if\((.*?)\) \}\}(.*?)\{\{ else \}\}(.*?)\{\{ endif \}\}/s',
+            function (array $matches) use ($variables): string {
+                return self::evaluateCondition(trim($matches[1]), $variables)
+                    ? $matches[2]
+                    : $matches[3];
+            },
+            $html
+        );
     }
 
-    $var = $matches[1];
-    $operator = $matches[2];
-    $value = trim($matches[3], "'\""); // Eliminar comillas alrededor del valor
-
-    // Obtener el valor de la variable
-    $varValue = $variables[$var] ?? null;
-
-    // Comparar según el operador
-    switch ($operator) {
-        case '==':
-            return $varValue == $value; // Comparación flexible
-        case '!=':
-            return $varValue != $value; // Comparación flexible
-        case '>':
-            return $varValue > $value;
-        case '<':
-            return $varValue < $value;
-        case '>=':
-            return $varValue >= $value;
-        case '<=':
-            return $varValue <= $value;
-        default:
+    private static function evaluateCondition(string $condition, array $variables): bool
+    {
+        if (!preg_match('/(\w+)\s*([!=<>]+)\s*(.*)/', $condition, $m) || count($m) < 4) {
             return false;
+        }
+
+        $varValue = $variables[$m[1]] ?? null;
+        $value    = trim($m[3], "'\"");
+
+        return match ($m[2]) {
+            '=='    => $varValue == $value,
+            '!='    => $varValue != $value,
+            '>'     => $varValue > $value,
+            '<'     => $varValue < $value,
+            '>='    => $varValue >= $value,
+            '<='    => $varValue <= $value,
+            default => false,
+        };
     }
-}
 }
