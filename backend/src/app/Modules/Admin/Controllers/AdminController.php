@@ -4,7 +4,6 @@ namespace App\Modules\Admin\Controllers;
 
 use App\Support\Request;
 use App\Support\Response;
-use App\Helpers\RenderHelper;
 use App\Modules\Admin\Services\RolService;
 use App\Modules\Admin\Services\PermisosService;
 use App\Modules\Auth\Services\AuthService;
@@ -20,106 +19,114 @@ class AdminController
     ) {
     }
 
-    public function home(Request $request): Response
+    // ── Roles ─────────────────────────────────────────────────────────────────
+
+    public function indexRoles(Request $request): Response
     {
-        return RenderHelper::render('Admin.views.home');
+        return Response::success($this->rolService->getAll());
     }
 
-    public function roles(Request $request): Response
-    {
-        $roles = $this->rolService->getAll();
-        return RenderHelper::render('Admin.views.roles', ['roles' => $roles]);
-    }
-
-    public function rolesABM(Request $request): Response
+    public function showRole(Request $request): Response
     {
         $id = (int) $request->route('id');
 
-        $rol                = $this->rolService->get($id);
-        $nombre             = $rol[0]['nombre'] ?? '';
-        $estado             = $rol[0]['estado'] ?? '';
-        $permisosDisponibles = $this->permisosService->getAvailable($id);
-        $permisosAsignados   = $this->permisosService->getOnUse($id);
-
-        return RenderHelper::render('Admin.views.rolesABM', [
-            'nombre'              => $nombre,
-            'estado'              => $estado,
-            'permisosDisponibles' => $permisosDisponibles,
-            'permisosAsignados'   => $permisosAsignados,
-            'rol'                 => $id,
+        return Response::success([
+            'rol'                  => $this->rolService->get($id),
+            'permisosDisponibles'  => $this->permisosService->getAvailable($id),
+            'permisosAsignados'    => $this->permisosService->getOnUse($id),
         ]);
     }
 
-    public function gestionarRoles(Request $request): Response
+    public function storeRole(Request $request): Response
     {
-        $accion  = $request->input('accion');
-        $rolId   = (int) $request->input('rol', 0);
-        $nombre  = (string) $request->input('nombre', '');
-        $estado  = (int) $request->input('estado', 1);
+        $nombre = (string) $request->input('nombre', '');
+        $id     = $this->rolService->create($nombre);
 
-        match ($accion) {
-            'asignar'       => $this->permisosService->asignar($rolId, (array) $request->input('permisos_disponibles', [])),
-            'desasignar'    => $this->permisosService->desasignar($rolId, (array) $request->input('permisos_asignados', [])),
-            'actualizarDatos' => $rolId === 0
-                ? ($rolId = $this->rolService->create($nombre))
-                : $this->rolService->update($rolId, $nombre, $estado),
-            default         => null,
-        };
-
-        return Response::redirect("/admin/roles/abm/{$rolId}");
+        return Response::success(['id' => $id], 201);
     }
 
-    public function permisos(Request $request): Response
+    public function updateRole(Request $request): Response
     {
-        $permisos = $this->permisosService->getAll();
-        return RenderHelper::render('Admin.views.permisos', ['permisos' => $permisos]);
+        $id     = (int) $request->route('id');
+        $nombre = (string) $request->input('nombre', '');
+        $estado = (int) $request->input('estado', 1);
+
+        $this->rolService->update($id, $nombre, $estado);
+
+        return Response::success(['updated' => true]);
     }
 
-    public function permisosABM(Request $request): Response
+    public function assignPermisos(Request $request): Response
     {
-        $id      = (int) $request->route('id');
-        $permiso = $this->permisosService->get($id);
+        $id       = (int) $request->route('id');
+        $permisos = (array) $request->input('permisos', []);
 
-        return RenderHelper::render('Admin.views.permisosABM', [
-            'nombre'      => $permiso[0]['key'] ?? '',
-            'descripcion' => $permiso[0]['descripcion'] ?? '',
-            'estado'      => $permiso[0]['estado'] ?? '',
-            'id'          => $id,
-        ]);
+        $this->permisosService->asignar($id, $permisos);
+
+        return Response::success(['assigned' => true]);
     }
 
-    public function gestionarPermisos(Request $request): Response
+    public function unassignPermisos(Request $request): Response
     {
-        $accion      = $request->input('accion');
-        $id          = (int) $request->input('id', 0);
-        $key         = (string) $request->input('nombre', '');
+        $id       = (int) $request->route('id');
+        $permisos = (array) $request->input('permisos', []);
+
+        $this->permisosService->desasignar($id, $permisos);
+
+        return Response::success(['unassigned' => true]);
+    }
+
+    // ── Permisos ──────────────────────────────────────────────────────────────
+
+    public function indexPermisos(Request $request): Response
+    {
+        return Response::success($this->permisosService->getAll());
+    }
+
+    public function showPermiso(Request $request): Response
+    {
+        $id = (int) $request->route('id');
+
+        return Response::success($this->permisosService->get($id));
+    }
+
+    public function storePermiso(Request $request): Response
+    {
+        $key         = (string) $request->input('key', '');
+        $descripcion = (string) $request->input('descripcion', '');
+
+        $this->permisosService->createPermiso($key, $descripcion);
+
+        return Response::success(['created' => true], 201);
+    }
+
+    public function updatePermiso(Request $request): Response
+    {
+        $id          = (int) $request->route('id');
+        $key         = (string) $request->input('key', '');
         $descripcion = (string) $request->input('descripcion', '');
         $estado      = (int) $request->input('estado', 0);
 
-        if ($accion === 'actualizarDatos') {
-            $id === 0
-                ? $this->permisosService->createPermiso($key, $descripcion)
-                : $this->permisosService->updatePermiso($id, $key, $descripcion, $estado);
-        }
+        $this->permisosService->updatePermiso($id, $key, $descripcion, $estado);
 
-        return Response::redirect('/admin/permisos');
+        return Response::success(['updated' => true]);
     }
 
-    public function impersonalizar(Request $request): Response
+    // ── Users & Impersonation ─────────────────────────────────────────────────
+
+    public function users(Request $request): Response
     {
         $data = $this->usuariosService->getAll();
-        return RenderHelper::render('Admin.views.impersonalizar', ['usuarios' => $data['results'] ?? []]);
+
+        return Response::success($data['results'] ?? []);
     }
 
-    public function loguear(Request $request): Response
+    public function impersonate(Request $request): Response
     {
-        $adminId  = (int) $request->input('adminUserId');
-        $targetId = (int) $request->input('targetUserId');
+        $adminId  = (int) $request->user()['id'];
+        $targetId = (int) $request->input('userId');
         $token    = $this->authService->impersonate($adminId, $targetId);
 
-        return Response::success([
-            'token'       => $token,
-            'redirectUrl' => $_ENV['IMPERSONALIZE_URL'] ?? '',
-        ]);
+        return Response::success(['token' => $token]);
     }
 }
