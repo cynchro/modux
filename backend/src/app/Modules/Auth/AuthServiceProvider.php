@@ -12,15 +12,18 @@ class AuthServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->container->singleton(AuthRepository::class, fn ($c) =>
-            new AuthRepository($c->get(\PDO::class))
-        );
+            new AuthRepository($c->get(\PDO::class)));
 
         $this->container->singleton(AuthService::class, fn ($c) =>
-            new AuthService($c->get(AuthRepository::class))
-        );
+            new AuthService($c->get(AuthRepository::class)));
 
         $this->container->singleton(AuthController::class, fn ($c) =>
-            new AuthController($c->get(AuthService::class))
-        );
+            new AuthController($c->get(AuthService::class)));
+    }
+
+    public function boot(): void
+    {
+        $router = $this->container->get(\App\Support\Router::class);
+        require __DIR__ . '/routes.php';
     }
 }

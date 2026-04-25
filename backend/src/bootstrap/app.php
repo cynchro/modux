@@ -11,21 +11,15 @@ $dotenv->required(['JWT_SECRET', 'DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS']);
 App\Support\Config::setPath(dirname(__DIR__) . '/config');
 
 // ── Stage 3: Error display ────────────────────────────────────────────────────
-if (App\Support\Config::get('app.debug', false)) {
-    error_reporting(E_ALL);
-    ini_set('display_errors', '0'); // Never show HTML errors — always JSON via handler
-} else {
-    error_reporting(0);
-    ini_set('display_errors', '0');
-}
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
 
 // ── Stage 4: Container ────────────────────────────────────────────────────────
 $app = new App\Support\Container();
 
 // ── Stage 5: Logger & exception handler ──────────────────────────────────────
 $app->singleton(App\Support\Logger::class, fn () =>
-    new App\Support\Logger(App\Support\Config::all('logging'))
-);
+    new App\Support\Logger(App\Support\Config::all('logging')));
 
 App\Exceptions\Handler::register($app->get(App\Support\Logger::class));
 
@@ -41,23 +35,36 @@ App\Config\Database::setConnection($app->get(\PDO::class));
 
 // ── Stage 7: Router & Kernel ──────────────────────────────────────────────────
 $app->singleton(App\Support\Router::class, fn ($c) =>
-    new App\Support\Router($c)
-);
+    new App\Support\Router($c));
 
 $app->singleton(App\Support\Kernel::class, fn ($c) =>
-    new App\Support\Kernel($c)
-);
+    new App\Support\Kernel($c));
 
 // ── Stage 8: Module service providers ────────────────────────────────────────
 $providers = [
     App\Modules\Auth\AuthServiceProvider::class,
     App\Modules\Usuario\UsuarioServiceProvider::class,
     App\Modules\Admin\AdminServiceProvider::class,
-    App\Modules\Logs\LogsServiceProvider::class,
+    App\Modules\Cliente\ClienteServiceProvider::class,
+    App\Modules\Tenant\TenantServiceProvider::class,
 ];
 
+$providerInstances = [];
 foreach ($providers as $providerClass) {
-    (new $providerClass($app))->register();
+    $instance = new $providerClass($app);
+    $instance->register();
+    $providerInstances[] = $instance;
 }
+
+foreach ($providerInstances as $instance) {
+    $instance->boot();
+}
+
+// ── Stage 9: Infrastructure routes (not module concerns) ─────────────────────
+$app->singleton(App\Http\Controllers\HealthController::class, fn ($c) =>
+    new App\Http\Controllers\HealthController($c->get(\PDO::class)));
+
+$app->get(App\Support\Router::class)
+    ->get('/health', [App\Http\Controllers\HealthController::class, 'check']);
 
 return $app;

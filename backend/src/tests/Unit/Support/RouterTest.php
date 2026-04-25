@@ -12,7 +12,7 @@ use Tests\Unit\UnitTestCase;
 
 class RouterTest extends UnitTestCase
 {
-    private Router    $router;
+    private Router $router;
     private Container $container;
 
     protected function setUp(): void
@@ -60,7 +60,7 @@ class RouterTest extends UnitTestCase
         $output = ob_get_clean();
 
         $data = json_decode((string) $output, true);
-        $this->assertSame('42', $data['response']['id']);
+        $this->assertSame('42', $data['data']['id']);
     }
 
     public function test_backward_compat_boolean_protected_true(): void

@@ -2,16 +2,25 @@
 
 namespace App\Support;
 
+use App\Exceptions\ValidationException;
+
 class Request
 {
-    private array  $post;
-    private array  $get;
-    private array  $files;
-    private array  $server;
-    private array  $jsonData;
-    private array   $routeParams = [];
-    private ?array  $resolvedUser = null;
+    private array $post;
+    private array $get;
+    private array $files;
+    private array $server;
+    private array $jsonData;
+    private array $routeParams = [];
+    private ?array $resolvedUser = null;
     private ?string $resolvedTenantId = null;
+
+    private static ?string $testInputStream = null;
+
+    public static function setTestInputStream(?string $body): void
+    {
+        self::$testInputStream = $body;
+    }
 
     public function __construct()
     {
@@ -25,11 +34,20 @@ class Request
     private function parseJson(): array
     {
         $contentType = $this->server['CONTENT_TYPE'] ?? '';
-        if (stripos($contentType, 'application/json') !== false) {
-            $raw = file_get_contents('php://input');
-            return json_decode($raw, true) ?? [];
+        if (stripos($contentType, 'application/json') === false) {
+            return [];
         }
-        return [];
+
+        $raw = self::$testInputStream ?? (string) file_get_contents('php://input');
+        if ($raw === '') {
+            return [];
+        }
+
+        try {
+            return json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new ValidationException(['body' => ['Invalid JSON payload.']]);
+        }
     }
 
     public function input(string $key, mixed $default = null): mixed
@@ -69,9 +87,18 @@ class Request
 
     public function ip(): string
     {
-        return $this->server['HTTP_X_FORWARDED_FOR']
-            ?? $this->server['REMOTE_ADDR']
-            ?? '0.0.0.0';
+        $remoteAddr    = $this->server['REMOTE_ADDR'] ?? '0.0.0.0';
+        $trustedProxies = Config::get('app.trusted_proxies', []);
+
+        if (
+            !empty($trustedProxies)
+            && in_array($remoteAddr, $trustedProxies, true)
+            && !empty($this->server['HTTP_X_FORWARDED_FOR'])
+        ) {
+            return trim(explode(',', $this->server['HTTP_X_FORWARDED_FOR'])[0]);
+        }
+
+        return $remoteAddr;
     }
 
     public function bearerToken(): ?string

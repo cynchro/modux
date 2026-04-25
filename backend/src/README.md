@@ -1,6 +1,6 @@
 # Modux
 
-A lightweight, dependency-injection-first PHP framework organized as a modular monolith. Each business domain lives in its own self-contained module. No facades, no magic statics, no hidden globals — every dependency is explicit and injected.
+A production-ready PHP modular monolith framework. Each business domain lives in its own self-contained module. No facades, no magic statics, no hidden globals — every dependency is explicit and injected.
 
 **Best for:** teams that want full control over their codebase, clear request lifecycles, and testable code without learning a large framework's conventions.
 
@@ -9,21 +9,23 @@ A lightweight, dependency-injection-first PHP framework organized as a modular m
 ## At a glance
 
 ```
-Request → Kernel → Global pipeline (CORS, SecurityHeaders, Logger)
-                 → Route middlewares (Auth, Admin, Tenant)
+Request → Kernel → Global pipeline (CORS, RequestSize, SecurityHeaders, Logger)
+                 → Route middlewares (Auth?, Admin?, Tenant?)
                  → Controller (typed injection via reflection)
-                 → Response (always JSON or HTML, never echo+exit)
+                 → Response (always JSON, never echo+exit)
 ```
 
 - **Zero magic** — no facades, no service locator calls in business code
-- **PSR-11 container** with autowiring
-- **PSR-3 structured logger** (JSON to file or stderr)
-- **Middleware pipeline** composable per-route and per-group
-- **FormRequest** pattern: validates on construction, throws automatically
-- **Exception hierarchy** → automatic JSON HTTP responses
-- **Multi-tenancy ready** via `TenantMiddleware` + JWT `tenant_id` claim
-- **Versioned migrations** with `php modux migrate`
-- **81 unit tests**, phpstan level 6, phpcs PSR-12, GitHub Actions CI
+- **PSR-11 container** with reflection-based autowiring
+- **PSR-3 structured logger** — JSON to file or stderr, falls back silently
+- **Middleware pipeline** — composable per-route and per-group, immutable via clone
+- **FormRequest** — validates on construction, throws `ValidationException` (422) automatically
+- **Exception hierarchy** — typed exceptions map directly to HTTP status codes
+- **JWT + refresh token rotation** — opaque refresh tokens, per-user revocation
+- **Rate limiting** — APCu-based per IP/username, graceful no-op if APCu not available
+- **Multi-tenancy** — row-level isolation via `TenantMiddleware` + JWT `tenant_id` claim (optional)
+- **Versioned migrations** — tracked in a `migrations` table, safe to run on every deploy
+- **119 unit tests**, PHPStan level 6 clean, PHPCS PSR-12
 
 ---
 
@@ -37,19 +39,12 @@ Request → Kernel → Global pipeline (CORS, SecurityHeaders, Logger)
 
 ## Installation
 
-### Via Composer (recommended)
-
 ```bash
-composer create-project cynchro/modux mi-proyecto
-cd mi-proyecto
-```
-
-### Via Git
-
-```bash
-git clone https://github.com/cynchro/modux.git mi-proyecto
-cd mi-proyecto
+git clone <repo> my-project
+cd my-project
 composer install
+cp backend/src/.env.example backend/src/.env
+# Edit .env — see Environment Variables section
 ```
 
 ---
@@ -57,17 +52,20 @@ composer install
 ## Quick start
 
 ```bash
-cp .env.example .env
-# Edit .env — minimum required:
-#   JWT_SECRET=<run: php -r "echo bin2hex(random_bytes(32));"> 
-#   DB_HOST, DB_NAME, DB_USER, DB_PASS
+# 1. Configure environment
+cp backend/src/.env.example backend/src/.env
+# Set JWT_SECRET, DB_HOST, DB_NAME, DB_USER, DB_PASS
 
+# 2. Run migrations
+cd backend/src
 php modux migrate
 
+# 3. Start the server
 php -S localhost:8080 -t public/
 ```
 
 ```bash
+# Login
 curl -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
   -d '{"usuario":"admin@admin.com","clave":"admin123"}'
@@ -76,17 +74,83 @@ curl -X POST http://localhost:8080/auth/login \
 ```json
 {
   "success": true,
-  "response": {
-    "token": "eyJ0eXAiOiJKV1QiLCJhbGci..."
+  "data": {
+    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGci...",
+    "refresh_token": "a8f3c1d9e..."
   }
+}
+```
+
+```bash
+# Health check
+curl http://localhost:8080/health
+```
+
+```json
+{
+  "success": true,
+  "data": { "status": "ok", "php": "8.2.0", "db": "ok" }
 }
 ```
 
 ---
 
-## CLI — `php modux`
+## Project structure
 
-The framework ships with a CLI for scaffolding and database management.
+```
+backend/src/
+├── app/
+│   ├── Config/             # PDO singleton bridge (backward compat)
+│   ├── Exceptions/         # Exception hierarchy + global JSON handler
+│   ├── Helpers/            # PaginatorHelper, EmailHelper
+│   ├── Http/
+│   │   ├── Controllers/    # Infrastructure controllers (HealthController)
+│   │   └── Middleware/     # CorsMiddleware, AuthMiddleware, AdminMiddleware,
+│   │                       # TenantMiddleware, SecurityHeadersMiddleware,
+│   │                       # RequestSizeLimitMiddleware, RequestLoggerMiddleware
+│   ├── Modules/            # Business domain modules
+│   │   └── {Name}/
+│   │       ├── Controllers/
+│   │       ├── Repositories/
+│   │       ├── Requests/       # Extend FormRequest
+│   │       ├── Services/
+│   │       ├── {Name}ServiceProvider.php
+│   │       └── routes.php
+│   └── Support/            # Framework core
+│       ├── Config.php          # Static config loader (config/*.php files)
+│       ├── Container.php       # PSR-11 DI container with autowiring
+│       ├── FormRequest.php     # Validated request base class
+│       ├── JWTConfig.php       # JWT encode/decode/refresh helpers
+│       ├── Kernel.php          # HTTP kernel — creates Request, dispatches
+│       ├── Logger.php          # PSR-3 structured JSON logger
+│       ├── Pipeline.php        # Immutable middleware pipeline
+│       ├── Request.php         # HTTP request wrapper
+│       ├── Response.php        # Immutable JSON response
+│       ├── Router.php          # Route registration + dispatch
+│       ├── ServiceProvider.php # Base provider (register/boot lifecycle)
+│       └── Validator.php       # Validation engine
+├── modux                   # CLI entry point
+├── bootstrap/
+│   ├── app.php             # Boot sequence (9 stages)
+│   └── test.php            # Test bootstrap (skips HTTP dispatch)
+├── config/
+│   ├── app.php             # App settings, trusted proxies, request size
+│   ├── auth.php            # JWT secret, TTL, algorithm
+│   ├── cors.php            # Allowed origins, methods, headers
+│   ├── database.php        # PDO connection config
+│   ├── logging.php         # Channel, driver, level, path
+│   └── mail.php            # SMTP settings
+├── migrations/             # 0001_*.php, 0002_*.php, ...
+├── public/index.php        # 3-line entry point
+├── seeders/
+└── tests/
+    ├── Feature/            # Full HTTP dispatch, real DB, transaction rollback
+    └── Unit/               # Mocked repositories, no DB
+```
+
+---
+
+## CLI — `php modux`
 
 ```
 php modux make:module <Name>      Scaffold a complete module (7 files)
@@ -98,29 +162,38 @@ php modux routes                  List every registered route
 ### `make:module`
 
 ```bash
-php modux make:module Cliente
+php modux make:module Producto
 ```
 
-Generates `app/Modules/Cliente/` with:
+Generates `app/Modules/Producto/` with:
 
 ```
-Controllers/ClienteController.php
-Repositories/ClienteRepository.php
-Services/ClienteService.php
-Requests/CreateClienteRequest.php
-Requests/UpdateClienteRequest.php
-ClienteServiceProvider.php
+Controllers/ProductoController.php
+Repositories/ProductoRepository.php
+Services/ProductoService.php
+Requests/CreateProductoRequest.php
+Requests/UpdateProductoRequest.php
+ProductoServiceProvider.php
 routes.php
+```
+
+Then register the provider in `bootstrap/app.php`:
+
+```php
+$providers = [
+    // ...existing providers...
+    App\Modules\Producto\ProductoServiceProvider::class,
+];
 ```
 
 ### `make:migration`
 
 ```bash
-php modux make:migration create_clientes_table
-# → migrations/0002_create_clientes_table.php
+php modux make:migration create_productos_table
+# → migrations/0002_create_productos_table.php
 ```
 
-Files are numbered sequentially (`0001_`, `0002_`, ...). Each migration exposes `up(PDO)` and `down(PDO)`.
+Files are numbered sequentially. Each file returns an anonymous class with `up(PDO)` and `down(PDO)`.
 
 ### `migrate`
 
@@ -135,7 +208,7 @@ php modux migrate
   1 migration(s) ran.
 ```
 
-Tracks which migrations have run in a `migrations` table. Safe to run multiple times.
+Tracks ran migrations in a `migrations` table. Safe to run on every deploy.
 
 ### `routes`
 
@@ -144,79 +217,41 @@ php modux routes
 ```
 
 ```
-  METHOD    URI                     HANDLER                    MIDDLEWARES
-  ──────────────────────────────────────────────────────────────────────────
-  GET       /auth/login             AuthController@login
-  POST      /auth/logout            AuthController@logout      AuthMiddleware
-  GET       /clientes               ClienteController@index    AuthMiddleware
-  GET       /clientes/{id}          ClienteController@show     AuthMiddleware
-  DELETE    /usuarios/{id}          UsuarioController@delete   AuthMiddleware, AdminMiddleware
+  METHOD    URI                         HANDLER                        MIDDLEWARES
+  ─────────────────────────────────────────────────────────────────────────────────
+  POST      /auth/login                 AuthController@login
+  POST      /auth/refresh               AuthController@refresh
+  POST      /auth/logout                AuthController@logout           AuthMiddleware
+  POST      /auth/impersonate           AuthController@impersonate      Auth, Admin, Tenant
+  GET       /clientes                   ClienteController@index         Auth, Tenant
+  GET       /health                     HealthController@check
 ```
 
 Does not require a database connection.
 
 ---
 
-## Project structure
+## Boot sequence
 
-```
-backend/src/
-├── app/
-│   ├── Config/         # Database connection bridge (PDO singleton)
-│   ├── Exceptions/     # Exception hierarchy + global JSON handler
-│   ├── Helpers/        # PaginatorHelper, EmailHelper
-│   ├── Http/
-│   │   └── Middleware/ # CorsMiddleware, AuthMiddleware, AdminMiddleware,
-│   │                   # TenantMiddleware, SecurityHeadersMiddleware,
-│   │                   # RequestLoggerMiddleware
-│   ├── Modules/        # Business domains (one directory per module)
-│   │   └── {Name}/
-│   │       ├── Controllers/
-│   │       ├── Repositories/
-│   │       ├── Requests/       # Extend FormRequest
-│   │       ├── Services/
-│   │       ├── {Name}ServiceProvider.php
-│   │       └── routes.php
-│   └── Support/        # Framework core
-│       ├── Config.php, Container.php, FormRequest.php
-│       ├── Kernel.php, Logger.php, Pipeline.php
-│       ├── Request.php, Response.php, Router.php
-│       └── Validator.php
-├── modux               # CLI entry point
-├── bootstrap/
-│   ├── app.php         # Boot sequence (env → container → logger → DB → providers)
-│   └── test.php        # Test bootstrap (no HTTP dispatch)
-├── config/             # app.php, auth.php, cors.php, database.php, logging.php, mail.php
-├── migrations/         # Versioned migration files (0001_*.php, 0002_*.php, ...)
-├── seeders/            # Data seeders
-├── public/index.php    # 3-line entry point
-└── tests/
-    ├── Feature/
-    └── Unit/
-```
+`bootstrap/app.php` boots in 9 ordered stages:
+
+| Stage | What happens |
+|---|---|
+| 1 | Load `.env`, enforce required vars |
+| 2 | Set config path |
+| 3 | Set error reporting, disable display_errors |
+| 4 | Build PSR-11 Container |
+| 5 | Register Logger singleton + global exception handler |
+| 6 | Register PDO singleton |
+| 7 | Register Router + Kernel singletons |
+| 8 | Run all module ServiceProviders (two-pass: all `register()`, then all `boot()`) |
+| 9 | Register infrastructure routes (health check) |
+
+The two-pass provider lifecycle means all bindings exist before any provider's `boot()` (which loads routes and resolves controllers) runs.
 
 ---
 
 ## Creating a module
-
-```bash
-php modux make:module Producto
-```
-
-Then register the provider in `bootstrap/app.php`:
-
-```php
-$providers = [
-    // ...existing providers...
-    App\Modules\Producto\ProductoServiceProvider::class,
-];
-```
-
-The generator produces ready-to-use files. The only things to fill in manually:
-
-1. **Repository** — replace the `create()` and `update()` SQL stubs with your actual columns
-2. **Requests** — add validation rules
-3. **Migration** — `php modux make:migration create_productos_table`
 
 ### Repository
 
@@ -233,7 +268,8 @@ class ProductoRepository
     /** @return list<array<string, mixed>> */
     public function findAll(): array
     {
-        return (array) $this->pdo->query('SELECT * FROM productos')->fetchAll(PDO::FETCH_ASSOC);
+        return $this->pdo->query('SELECT * FROM productos')
+            ->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /** @return array<string, mixed> */
@@ -244,7 +280,7 @@ class ProductoRepository
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$row) {
-            throw new NotFoundException('Producto', $id);  // → HTTP 404
+            throw new NotFoundException('Producto', $id);
         }
 
         return $row;
@@ -271,9 +307,9 @@ class ProductoService
 {
     public function __construct(private ProductoRepository $repository) {}
 
-    public function getAll(): array  { return $this->repository->findAll(); }
-    public function get(int $id): array { return $this->repository->findById($id); }
-    public function create(array $data): array { return $this->repository->create($data); }
+    public function getAll(): array       { return $this->repository->findAll(); }
+    public function get(int $id): array   { return $this->repository->findById($id); }
+    public function create(array $d): array { return $this->repository->create($d); }
 }
 ```
 
@@ -296,9 +332,13 @@ class ProductoController
         return Response::success($this->service->getAll());
     }
 
+    public function show(Request $request): Response
+    {
+        return Response::success($this->service->get((int) $request->route('id')));
+    }
+
     public function create(CreateProductoRequest $request): Response
     {
-        // $request->validated() returns only the fields declared in rules()
         return Response::success($this->service->create($request->validated()), 201);
     }
 }
@@ -328,6 +368,12 @@ class ProductoServiceProvider extends ServiceProvider
             new ProductoController($c->get(ProductoService::class))
         );
     }
+
+    public function boot(): void
+    {
+        $router = $this->container->get(\App\Support\Router::class);
+        require __DIR__ . '/routes.php';
+    }
 }
 ```
 
@@ -341,28 +387,24 @@ class ProductoServiceProvider extends ServiceProvider
 // Public
 $router->post('/auth/login', [AuthController::class, 'login']);
 
-// With explicit middlewares
-$router->get('/usuarios/{id}', [UsuarioController::class, 'show'],
+// With middlewares
+$router->get('/productos/{id}', [ProductoController::class, 'show'],
     [AuthMiddleware::class]);
 
-$router->delete('/usuarios/{id}', [UsuarioController::class, 'delete'],
+$router->delete('/productos/{id}', [ProductoController::class, 'delete'],
     [AuthMiddleware::class, AdminMiddleware::class]);
 ```
 
-### Route groups — share middlewares across routes
+### Route groups — share middlewares
 
 ```php
-use App\Http\Middleware\AuthMiddleware;
-use App\Http\Middleware\AdminMiddleware;
-
-// All routes inside inherit AuthMiddleware
 $router->group([AuthMiddleware::class], function ($router) {
     $router->get('/productos',      [ProductoController::class, 'index']);
     $router->post('/productos',     [ProductoController::class, 'create']);
     $router->put('/productos/{id}', [ProductoController::class, 'update']);
 });
 
-// Nested groups merge middlewares
+// Nested groups — middlewares are merged, not replaced
 $router->group([AuthMiddleware::class], function ($router) {
     $router->group([AdminMiddleware::class], function ($router) {
         $router->get('/admin/roles', [AdminController::class, 'roles']);
@@ -372,6 +414,116 @@ $router->group([AuthMiddleware::class], function ($router) {
 ```
 
 Route parameters are extracted automatically and available via `$request->route('id')`.
+
+### Controller injection
+
+The router resolves controller method parameters by type:
+
+| Parameter type | What gets injected |
+|---|---|
+| `Request` | The current request (with `user()`, `tenantId()`, route params already set) |
+| Subclass of `FormRequest` | A new instance constructed from `$request->all() + routeParams()` — validated on construction |
+| Any other class | Resolved from the container |
+| Scalar (untyped) | `$request->route($paramName)` |
+
+**Dual-parameter pattern** — use when you need both the request context (tenantId, user) and a validated FormRequest:
+
+```php
+public function create(Request $request, CreateProductoRequest $validated): Response
+{
+    $tenantId = (string) $request->tenantId();
+    return Response::success($this->service->create($validated->validated(), $tenantId), 201);
+}
+```
+
+---
+
+## Request API
+
+```php
+// Input — priority: route params > JSON body > POST > GET
+$request->input('key');
+$request->input('key', 'default');
+$request->all();                   // all merged inputs
+$request->only(['campo1', 'campo2']);
+$request->except(['_token']);
+
+// Route parameters (from URI segments like {id})
+$request->route('id');
+
+// HTTP metadata
+$request->method();                // 'GET', 'POST', etc.
+$request->uri();                   // '/path/only' (no query string)
+$request->header('X-Custom');
+$request->bearerToken();           // extracts from Authorization: Bearer <token>
+$request->ip();                    // client IP, respects trusted proxies
+
+// Middleware-set context
+$request->user();                  // array payload from JWT (set by AuthMiddleware)
+$request->tenantId();              // string (set by TenantMiddleware)
+
+// Type checks
+$request->isJson();                // true if Content-Type: application/json
+
+// Magic property access
+$request->nombre;                  // same as $request->input('nombre')
+```
+
+---
+
+## Response API
+
+Response is immutable — every method returns a new instance.
+
+```php
+// Success responses
+Response::success($data);           // 200
+Response::success($data, 201);      // 201 Created
+
+// Error responses
+Response::error('Not allowed.', 403);
+
+// HTML response
+Response::html('<h1>Hello</h1>');
+
+// Redirect
+Response::redirect('/new-path', 302);
+
+// Builder pattern
+(new Response())
+    ->withStatus(200)
+    ->withHeader('X-Custom', 'value')
+    ->json(['key' => 'value']);
+
+// Send (called once by Kernel)
+$response->send();
+$response->getStatus();            // int
+```
+
+Success response shape:
+
+```json
+{ "success": true, "data": { ... } }
+```
+
+Error response shape (from typed exceptions):
+
+```json
+{ "success": false, "message": "Not found." }
+```
+
+Validation error shape:
+
+```json
+{
+  "success": false,
+  "message": "Validation failed.",
+  "errors": {
+    "email": ["email is required.", "email must be a valid email address."],
+    "precio": ["precio must be an integer."]
+  }
+}
+```
 
 ---
 
@@ -389,10 +541,14 @@ class CreateProductoRequest extends FormRequest
     protected function rules(): array
     {
         return [
-            'nombre' => 'required|min:2|max:100',
-            'precio' => 'required|integer',
-            'activo' => 'boolean',
-            'tipo'   => 'required|in:fisico,digital',
+            'nombre'    => 'required|min:2|max:100',
+            'precio'    => 'required|integer',
+            'activo'    => 'boolean',
+            'tipo'      => 'required|in:fisico,digital',
+            'url_foto'  => 'nullable|url',
+            'sku'       => 'nullable|regex:/^[A-Z]{2}-\d{4}$/',
+            'lanzado'   => 'nullable|date',
+            'ext_id'    => 'nullable|uuid',
         ];
     }
 }
@@ -401,29 +557,36 @@ class CreateProductoRequest extends FormRequest
 ### `all()` vs `validated()`
 
 ```php
-// Request body: {"nombre": "Mesa", "precio": 150, "admin": true, "_csrf": "xyz"}
+// Request body: {"nombre":"Mesa","precio":150,"admin":true}
 // Rules: {nombre, precio}
 
-$request->all()        // {"nombre": "Mesa", "precio": 150, "admin": true, "_csrf": "xyz"}
-$request->validated()  // {"nombre": "Mesa", "precio": 150}  ← only declared fields
+$request->all()        // {"nombre":"Mesa","precio":150,"admin":true}
+$request->validated()  // {"nombre":"Mesa","precio":150}  ← only declared fields
 ```
 
-Always prefer `validated()` in controllers — it prevents over-posting by design.
+Always use `validated()` in business logic — it prevents mass-assignment by design.
 
 ### Validation rules
 
 | Rule | Example | Description |
 |---|---|---|
-| `required` | `required` | Field must be present and non-empty |
-| `email` | `email` | Must be a valid email address |
-| `min:N` | `min:6` | Minimum string length |
-| `max:N` | `max:255` | Maximum string length |
-| `integer` | `integer` | Must be an integer |
-| `boolean` | `boolean` | Must be true/false/0/1 |
-| `in:a,b,c` | `in:admin,user` | Must be one of the listed values |
-| `nullable` | `nullable` | Skip validation if field is absent or empty |
+| `required` | `required` | Present and non-empty |
+| `email` | `email` | Valid email format |
+| `min:N` | `min:6` | Minimum string length (multibyte-aware) |
+| `max:N` | `max:255` | Maximum string length (multibyte-aware) |
+| `integer` | `integer` | Must be an integer value |
 | `numeric` | `numeric` | Must be numeric (int or float) |
-| `confirmed` | `confirmed` | Must match a sibling field named `{field}_confirmation` |
+| `boolean` | `boolean` | `true`, `false`, `0`, `1`, `'0'`, `'1'` |
+| `string` | `string` | Must be a PHP string type |
+| `array` | `array` | Must be a PHP array type |
+| `in:a,b,c` | `in:admin,user` | Must be one of the listed values |
+| `url` | `url` | Valid URL (`filter_var FILTER_VALIDATE_URL`) |
+| `date` | `date` | Valid date in `Y-m-d` format (default) |
+| `date:format` | `date:d/m/Y` | Valid date in custom format |
+| `regex:/pattern/` | `regex:/^\d{4}$/` | Matches the given regular expression |
+| `uuid` | `uuid` | Valid UUID v4 format |
+| `confirmed` | `confirmed` | Matches `{field}_confirmation` sibling |
+| `nullable` | `nullable` | Skip all rules if field is absent or empty string |
 
 Rules are composable with `|`:
 
@@ -434,45 +597,6 @@ Rules are composable with `|`:
 
 ---
 
-## Migrations
-
-```bash
-# Create a new migration
-php modux make:migration create_productos_table
-# → migrations/0002_create_productos_table.php
-
-# Run all pending migrations
-php modux migrate
-```
-
-Each migration file returns an anonymous class with `up()` and `down()`:
-
-```php
-// migrations/0002_create_productos_table.php
-return new class {
-    public function up(\PDO $pdo): void
-    {
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS productos (
-                id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                nombre     VARCHAR(255) NOT NULL,
-                precio     INT          NOT NULL DEFAULT 0,
-                created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        ");
-    }
-
-    public function down(\PDO $pdo): void
-    {
-        $pdo->exec('DROP TABLE IF EXISTS productos');
-    }
-};
-```
-
-The `migrate` command tracks ran migrations in a `migrations` table and skips already-applied files. Safe to run on every deploy.
-
----
-
 ## Exceptions → HTTP responses
 
 Throw a typed exception anywhere — the global handler converts it to JSON automatically.
@@ -480,47 +604,39 @@ Throw a typed exception anywhere — the global handler converts it to JSON auto
 ```php
 throw new AuthException('Invalid credentials.');       // 401
 throw new ForbiddenException('Admin only.');           // 403
-throw new NotFoundException('Producto', $id);          // 404 — "Producto not found: 42"
+throw new NotFoundException('Producto', $id);          // 404
 throw new ValidationException(['campo' => ['msg']]);   // 422
+throw new RateLimitException('Too many attempts.');    // 429
 throw new DatabaseException('Query failed.');          // 500 (message hidden in prod)
 ```
 
-Example 404 response:
+| Exception | HTTP | Notes |
+|---|---|---|
+| `AuthException` | 401 | Invalid/missing/revoked token |
+| `ForbiddenException` | 403 | Authenticated but not authorized |
+| `NotFoundException` | 404 | Resource or route not found |
+| `MethodNotAllowedException` | 405 | Right path, wrong HTTP method |
+| `ValidationException` | 422 | Carries a field → messages array |
+| `RateLimitException` | 429 | Too many login attempts |
+| `DatabaseException` | 500 | DB errors; message hidden when `APP_DEBUG=false` |
 
-```json
-{
-  "success": false,
-  "error": "Producto not found: 42"
-}
-```
-
-Example 422 response:
-
-```json
-{
-  "success": false,
-  "error": "Validation failed.",
-  "errors": {
-    "email": ["email is required.", "email must be a valid email address."],
-    "precio": ["precio must be an integer."]
-  }
-}
-```
+All exceptions extend `AppException`. Unhandled `Throwable` returns 500 with the exception detail hidden in production.
 
 ---
 
 ## Middleware
 
-Middlewares implement `MiddlewareInterface` and are composable per-route or per-group.
-
-| Middleware | Trigger | Effect |
+| Middleware | Applied | Effect |
 |---|---|---|
-| `CorsMiddleware` | Every request | Sets CORS headers; handles OPTIONS preflight |
-| `SecurityHeadersMiddleware` | Every request | X-Frame-Options, X-Content-Type-Options, etc. |
-| `RequestLoggerMiddleware` | Every request | Logs method, URI, status, duration (JSON) |
-| `AuthMiddleware` | Protected routes | Decodes JWT, sets `$request->user()` |
-| `AdminMiddleware` | Admin routes | Checks `user['rol'] === 1`, throws 403 otherwise |
-| `TenantMiddleware` | Multi-tenant routes | Reads `tenant_id` from JWT, sets `$request->tenantId()` |
+| `CorsMiddleware` | All requests | CORS headers; handles OPTIONS preflight |
+| `RequestSizeLimitMiddleware` | All requests | Rejects bodies over `app.max_request_size` (default 2 MB) |
+| `SecurityHeadersMiddleware` | All requests | X-Frame-Options, X-Content-Type-Options, Referrer-Policy, etc. |
+| `RequestLoggerMiddleware` | All requests | Structured JSON log entry: method, URI, status, duration |
+| `AuthMiddleware` | Protected routes | Decodes JWT, validates token is not revoked, sets `$request->user()` |
+| `AdminMiddleware` | Admin routes | Requires `user['rol'] === 1`, throws 403 otherwise |
+| `TenantMiddleware` | Tenant-scoped routes | Reads `tenant_id` from JWT payload, sets `$request->tenantId()` |
+
+The global pipeline (`CorsMiddleware → RequestSizeLimitMiddleware → SecurityHeadersMiddleware → RequestLoggerMiddleware`) runs on every request before any route middleware.
 
 ### Writing a middleware
 
@@ -531,64 +647,226 @@ use App\Support\Request;
 use App\Support\Response;
 use App\Support\Contracts\MiddlewareInterface;
 
-class RateLimitMiddleware implements MiddlewareInterface
+class AuditMiddleware implements MiddlewareInterface
 {
     public function handle(Request $request, callable $next): Response
     {
-        // check rate limit...
-        return $next($request);
+        $response = $next($request);
+        // post-processing here
+        return $response;
     }
 }
 ```
 
 ---
 
-## Multi-tenancy
+## Authentication
 
-The framework ships with first-class multi-tenancy support via JWT claims.
+### Login
 
-**How it works:**
+```
+POST /auth/login
+Content-Type: application/json
 
-1. `usuarios` table has a `tenant_id CHAR(36)` column (FK → `tenants.id`)
-2. On login, `tenant_id` is embedded in the JWT payload
-3. `TenantMiddleware` validates and exposes it on the request
+{"usuario": "email@example.com", "clave": "password"}
+```
+
+Returns `access_token` (JWT) and `refresh_token` (opaque, stored in DB).
+
+The JWT payload contains `sub` (user ID), `tenant_id`, and expiry. Default TTL: 86400 seconds (configurable via `JWT_TTL`).
+
+### Token refresh
+
+```
+POST /auth/refresh
+Content-Type: application/json
+
+{"refresh_token": "a8f3c1d9..."}
+```
+
+Issues a new `access_token` + `refresh_token` pair. The old refresh token is deleted immediately (rotation — each token is single-use).
+
+### Logout
+
+```
+POST /auth/logout
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{"refresh_token": "a8f3c1d9..."}   ← optional, also invalidates refresh token
+```
+
+### Impersonation (admin only)
+
+```
+POST /auth/impersonate
+Authorization: Bearer <admin_access_token>
+Content-Type: application/json
+
+{"target_id": 42}
+```
+
+- Requires `AuthMiddleware + AdminMiddleware + TenantMiddleware`
+- Admin can only impersonate users within their own tenant
+- Returns a JWT signed as the target user
+
+### Rate limiting
+
+Login attempts are tracked per username using APCu. After 5 failed attempts the account is locked for 5 minutes (`RateLimitException` → 429). If APCu is not installed, rate limiting is silently skipped.
+
+### Authenticated request
+
+```
+GET /any-protected-route
+Authorization: Bearer <access_token>
+```
+
+`AuthMiddleware` decodes the JWT, verifies the token exists in the DB (revocation check), and calls `$request->setUser($payload)`. Use `$request->user()` in controllers and services.
+
+---
+
+## DI Container
+
+PSR-11 compliant with reflection-based autowiring.
 
 ```php
+// Register a factory
+$app->bind(MyService::class, fn ($c) => new MyService($c->get(PDO::class)));
+
+// Register a singleton (resolved once, reused)
+$app->singleton(MyService::class, fn ($c) => new MyService($c->get(PDO::class)));
+
+// Register a pre-built instance
+$app->instance(\PDO::class, $existingPdo);
+
+// Resolve
+$service = $app->get(MyService::class);
+
+// Autowire without registration (uses reflection)
+$service = $app->make(MyService::class);
+```
+
+Autowiring resolves constructor parameters by type name. If no binding exists for a type, it recursively resolves the class. Scalar parameters without defaults throw `ContainerException`.
+
+---
+
+## Multi-tenancy
+
+The framework ships with row-level multi-tenancy. It is **opt-in** — if you don't include `TenantMiddleware` on a route, tenantId is never set and no tenant scoping happens.
+
+### How it works
+
+1. The `usuarios` table has a `tenant_id CHAR(36)` column (FK → `tenants.id`)
+2. On login, `tenant_id` is embedded in the JWT payload
+3. `TenantMiddleware` reads `tenant_id` from the decoded JWT and calls `$request->setTenantId()`
+4. Controllers read `$request->tenantId()` and pass it down to repositories
+5. Repositories add `AND tenant_id = ?` to their queries when `$tenantId !== null`
+
+```php
+// Route — add TenantMiddleware to enable scoping
 $router->group([AuthMiddleware::class, TenantMiddleware::class], function ($router) {
     $router->get('/productos', [ProductoController::class, 'index']);
 });
 ```
 
 ```php
+// Controller
 public function index(Request $request): Response
 {
-    $tenantId = $request->tenantId();
-    return Response::success($this->service->getAllForTenant($tenantId));
+    return Response::success($this->service->getAllForTenant($request->tenantId()));
 }
 ```
+
+```php
+// Repository — conditional scoping
+public function findAll(?string $tenantId = null): array
+{
+    $sql    = 'SELECT * FROM productos';
+    $params = [];
+
+    if ($tenantId !== null) {
+        $sql    .= ' WHERE tenant_id = ?';
+        $params[] = $tenantId;
+    }
+
+    $stmt = $this->pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+```
+
+### Running without multi-tenancy
+
+Simply don't add `TenantMiddleware` to any route. The `tenant_id` column in `usuarios` can be omitted. Repositories receive `null` and skip the tenant filter. No other changes needed.
+
+### Admin impersonation across tenants
+
+An admin can only impersonate users within their own tenant. Attempting cross-tenant impersonation throws `AuthException(403)`. Passing `$adminTenantId = null` skips this check (internal use only — the route always passes the real tenant ID via `TenantMiddleware`).
 
 ---
 
 ## Config
 
 ```php
-Config::get('auth.jwt_secret');        // config/auth.php → jwt_secret
-Config::get('app.debug', false);       // with default
-Config::get('cors.allowed_origins');   // array from config/cors.php
+Config::get('auth.jwt_secret');         // config/auth.php → jwt_secret
+Config::get('app.debug', false);        // with default
+Config::get('cors.allowed_origins');    // array
+
+Config::all('database');                // entire config/database.php as array
 ```
+
+Config files live in `config/` and are plain PHP files returning arrays. Values map to env vars via `$_ENV`.
+
+---
+
+## Logger
+
+PSR-3 compliant. Inject via constructor:
+
+```php
+public function __construct(
+    private ProductoRepository $repository,
+    private \App\Support\Logger $logger,
+) {}
+
+public function delete(int $id): void
+{
+    $this->logger->info('Deleting product', ['id' => $id]);
+    $this->repository->delete($id);
+    $this->logger->error('DB error', ['exception' => $e->getMessage()]);
+}
+```
+
+Output to `storage/logs/app.log` (structured JSON, one entry per line):
+
+```json
+{"timestamp":"2026-04-25T15:30:00+00:00","level":"info","message":"Deleting product","context":{"id":42}}
+```
+
+Log levels (in order): `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`
+
+The minimum level is controlled by `LOG_LEVEL`. Messages below it are silently dropped.
+
+If the log file cannot be written, the logger falls back to `STDERR` automatically — no silent failures.
 
 ---
 
 ## Pagination
 
-`PaginatorHelper` wraps any raw SQL query and reads `page` / `perPage` from the request automatically.
+`PaginatorHelper` wraps any SQL query and reads `page` / `perPage` from query parameters automatically.
 
 ```php
-// In a repository
-public function list(): array
+public function list(?string $tenantId = null): array
 {
-    $paginator = new PaginatorHelper($this->pdo, 'SELECT * FROM productos WHERE activo = 1');
-    return $paginator->getPaginatedResults();
+    $sql    = 'SELECT * FROM productos WHERE activo = 1';
+    $params = [];
+
+    if ($tenantId !== null) {
+        $sql    .= ' AND tenant_id = ?';
+        $params[] = $tenantId;
+    }
+
+    return (new PaginatorHelper($this->pdo, $sql, $params))->getPaginatedResults();
 }
 ```
 
@@ -596,9 +874,9 @@ Query parameters accepted:
 
 | Param | Default | Description |
 |---|---|---|
-| `page` | `1` | Current page |
+| `page` | `1` | Current page (1-indexed) |
 | `perPage` | `10` | Items per page |
-| `paginate` | `true` | Set to `false` to return all results |
+| `paginate` | `true` | Set to `false` to return all results unpaged |
 
 Response shape:
 
@@ -613,41 +891,44 @@ Response shape:
 }
 ```
 
-LIMIT and OFFSET are bound via PDO prepared statements — `perPage` and `page` come from validated integer inputs only.
+LIMIT and OFFSET are bound via PDO prepared statements. `perPage` and `page` are cast to integers.
 
 ---
 
-## Logging
+## Migrations
 
 ```php
-public function __construct(
-    private ProductoRepository $repository,
-    private Logger $logger,
-) {}
+// migrations/0002_create_productos_table.php
+return new class {
+    public function up(\PDO $pdo): void
+    {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS productos (
+                id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                nombre     VARCHAR(255) NOT NULL,
+                precio     INT          NOT NULL DEFAULT 0,
+                tenant_id  CHAR(36)     NOT NULL,
+                created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_tenant (tenant_id),
+                CONSTRAINT fk_productos_tenant
+                    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    }
 
-public function delete(int $id): void
-{
-    $this->logger->info('Deleting product', ['id' => $id]);
-    $this->repository->delete($id);
-}
+    public function down(\PDO $pdo): void
+    {
+        $pdo->exec('DROP TABLE IF EXISTS productos');
+    }
+};
 ```
-
-Output — structured JSON to `storage/logs/app.log`:
-
-```json
-{"timestamp":"2026-04-22T15:30:00+00:00","level":"info","message":"Deleting product","context":{"id":42}}
-```
-
-Log levels: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`
-
-If the log file cannot be written (permission error, missing directory), the Logger falls back to `STDERR` automatically — no silent failures.
 
 ---
 
 ## Testing
 
 ```bash
-composer test      # PHPUnit
+composer test      # PHPUnit (119 tests)
 composer lint      # phpcs PSR-12
 composer analyse   # phpstan level 6
 ```
@@ -657,8 +938,12 @@ composer analyse   # phpstan level 6
 ```php
 class ProductoServiceTest extends UnitTestCase
 {
+    private ProductoRepository $repository;
+    private ProductoService $service;
+
     protected function setUp(): void
     {
+        parent::setUp();
         $this->repository = $this->createMock(ProductoRepository::class);
         $this->service    = new ProductoService($this->repository);
     }
@@ -675,29 +960,57 @@ class ProductoServiceTest extends UnitTestCase
 }
 ```
 
-### Feature tests — full HTTP dispatch, real DB
+`UnitTestCase` provides:
+- `setUp()` — clears superglobals before each test
+- `makeRequest(?array $user, ?string $tenantId): Request` — builds a Request with pre-set user/tenant context
+
+### Feature tests — full HTTP dispatch, real DB, auto-rollback
 
 ```php
-class AuthFeatureTest extends FeatureTestCase
+class ProductoFeatureTest extends FeatureTestCase
 {
-    public function test_login_returns_token(): void
+    public function test_create_returns_201(): void
     {
-        $response = $this->post('/auth/login', [
-            'usuario' => 'admin@admin.com',
-            'clave'   => 'admin123',
-        ]);
+        $token = $this->loginAs('admin@admin.com', 'admin123');
+
+        $response = $this->post('/productos', [
+            'nombre' => 'Mesa',
+            'precio' => 150,
+        ], $token);
 
         $this->assertTrue($response['success']);
-        $this->assertArrayHasKey('token', $response['response']);
+        $this->assertSame(201, $this->lastStatus());
     }
 }
 ```
+
+Each feature test wraps its DB operations in a transaction that rolls back in `tearDown()`.
+
+---
+
+## Health check
+
+```
+GET /health
+```
+
+Returns 200 when DB is reachable, 503 when degraded:
+
+```json
+{ "success": true, "data": { "status": "ok", "php": "8.2.0", "db": "ok" } }
+```
+
+```json
+{ "success": true, "data": { "status": "degraded", "php": "8.2.0", "db": "unreachable" } }
+```
+
+Use this endpoint for load balancer health probes, uptime monitors, and deploy scripts.
 
 ---
 
 ## Environment variables
 
-Copy `.env.example` to `.env`. Required at boot:
+Copy `.env.example` → `.env`. Required at boot (missing variables throw immediately):
 
 | Variable | Description |
 |---|---|
@@ -712,13 +1025,15 @@ Optional:
 | Variable | Default | Description |
 |---|---|---|
 | `APP_ENV` | `local` | `local` / `production` |
-| `APP_DEBUG` | `false` | Exposes exception details in JSON responses |
-| `JWT_TTL` | `86400` | Token lifetime in seconds |
+| `APP_DEBUG` | `false` | Expose exception details in JSON responses |
+| `JWT_TTL` | `86400` | Access token lifetime in seconds |
+| `JWT_REFRESH_TTL` | `604800` | Refresh token lifetime in seconds (7 days) |
 | `JWT_ALGO` | `HS256` | JWT signing algorithm |
+| `DB_PORT` | `3306` | Database port |
 | `LOG_CHANNEL` | `file` | `file` or `stderr` |
-| `LOG_LEVEL` | `debug` | Minimum log level |
+| `LOG_LEVEL` | `debug` | Minimum log level to write |
 | `CORS_ALLOWED_ORIGINS` | _(none)_ | Comma-separated list of allowed origins |
-| `MAIL_HOST`, `MAIL_PORT`, etc. | — | SMTP credentials for EmailHelper |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM` | — | SMTP credentials for `EmailHelper` |
 
 ---
 
@@ -726,17 +1041,17 @@ Optional:
 
 | | Modux | Laravel |
 |---|---|---|
-| Dependencies | 5 (jwt, mailer, dotenv, psr/log, psr/container) | 30+ |
-| Request lifecycle | Readable in 5 files | Spread across 50+ |
+| Runtime dependencies | ~5 | 30+ |
+| Request lifecycle | 5 files | 50+ files |
 | DI | Explicit constructor injection | Facades + service locator |
 | Magic | None | `Auth::user()`, `DB::table()`, `Cache::get()`, ... |
-| ORM | Raw PDO | Eloquent |
+| ORM | Raw PDO (you control every query) | Eloquent |
 | Queue / Events | Not included | Full system |
-| Validation rules | ~8 essential | 50+ |
-| Learning curve | Low — it's just PHP | High — learn the framework |
-| Suited for | Controlled APIs, internal tools, learning | Full-featured web apps |
+| Validation rules | 16 essential | 50+ |
+| Learning curve | Read the source, understand everything | Learn the framework conventions |
+| Suited for | Controlled APIs, internal tools, multi-tenant SaaS | Full-featured web apps |
 
-If you need Eloquent, queues, broadcasting, or a full admin panel — use Laravel.  
+If you need Eloquent, queues, broadcasting, or an ecosystem of packages — use Laravel.  
 If you want to understand exactly what happens on every line of every request — use this.
 
 ---

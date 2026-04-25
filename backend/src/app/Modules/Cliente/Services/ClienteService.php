@@ -11,34 +11,34 @@ class ClienteService
     }
 
     /** @return list<array<string, mixed>> */
-    public function getAll(): array
+    public function getAll(string $tenantId): array
     {
-        return $this->repository->findAll();
+        return $this->repository->findAll($tenantId);
     }
 
     /** @return array<string, mixed> */
-    public function get(int $id): array
+    public function get(int $id, string $tenantId): array
     {
-        return $this->repository->findById($id);
+        return $this->repository->findById($id, $tenantId);
     }
 
     /**
      * @param  array<string, mixed> $data
      * @return array<string, mixed>
      */
-    public function create(array $data): array
+    public function create(array $data, string $tenantId): array
     {
-        return $this->repository->create($data);
+        return $this->repository->create($data, $tenantId);
     }
 
     /** @param array<string, mixed> $data */
-    public function update(int $id, array $data): bool
+    public function update(int $id, array $data, string $tenantId): bool
     {
-        return $this->repository->update($id, $data);
+        return $this->repository->update($id, $data, $tenantId);
     }
 
-    public function delete(int $id): bool
+    public function delete(int $id, string $tenantId): bool
     {
-        return $this->repository->delete($id);
+        return $this->repository->delete($id, $tenantId);
     }
 }

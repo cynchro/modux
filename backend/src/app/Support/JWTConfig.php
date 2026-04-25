@@ -28,6 +28,21 @@ class JWTConfig
         return Config::get('auth.jwt_ttl', 86400);
     }
 
+    private static function refreshLifetime(): int
+    {
+        return Config::get('auth.jwt_refresh_ttl', 2592000); // 30 days
+    }
+
+    public static function generateRefreshToken(): string
+    {
+        return bin2hex(random_bytes(32));
+    }
+
+    public static function refreshExpiresAt(): string
+    {
+        return date('Y-m-d H:i:s', time() + self::refreshLifetime());
+    }
+
     public static function generateToken(int|string $userId, ?string $tenantId = null): string
     {
         $payload = [

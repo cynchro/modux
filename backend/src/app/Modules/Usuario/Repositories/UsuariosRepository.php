@@ -3,9 +3,7 @@
 namespace App\Modules\Usuario\Repositories;
 
 use PDO;
-use PDOException;
 use App\Helpers\PaginatorHelper;
-use App\Exceptions\DatabaseException;
 use App\Exceptions\NotFoundException;
 
 class UsuariosRepository
@@ -14,16 +12,32 @@ class UsuariosRepository
     {
     }
 
-    public function find(): array
+    public function find(int $page = 1, int $perPage = 10, ?string $tenantId = null): array
     {
-        $paginator = new PaginatorHelper($this->pdo, 'SELECT * FROM usuarios');
+        if ($tenantId !== null) {
+            $paginator = new PaginatorHelper(
+                $this->pdo,
+                'SELECT * FROM usuarios WHERE tenant_id = ?',
+                $page,
+                $perPage,
+                true,
+                [$tenantId],
+            );
+        } else {
+            $paginator = new PaginatorHelper($this->pdo, 'SELECT * FROM usuarios', $page, $perPage);
+        }
         return $paginator->getPaginatedResults();
     }
 
-    public function findById(int $id): array
+    public function findById(int $id, ?string $tenantId = null): array
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM usuarios WHERE id = ?');
-        $stmt->execute([$id]);
+        if ($tenantId !== null) {
+            $stmt = $this->pdo->prepare('SELECT * FROM usuarios WHERE id = ? AND tenant_id = ?');
+            $stmt->execute([$id, $tenantId]);
+        } else {
+            $stmt = $this->pdo->prepare('SELECT * FROM usuarios WHERE id = ?');
+            $stmt->execute([$id]);
+        }
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$result) {
@@ -31,18 +45,6 @@ class UsuariosRepository
         }
 
         return $result;
-    }
-
-    public function create(array $data): bool
-    {
-        // Implement as needed for your domain
-        return true;
-    }
-
-    public function update(array $data): bool
-    {
-        // Implement as needed for your domain
-        return true;
     }
 
     public function updateSucursal(int $userId, int $sucursalId): bool
@@ -54,10 +56,15 @@ class UsuariosRepository
         return $stmt->rowCount() > 0;
     }
 
-    public function delete(int $id): bool
+    public function delete(int $id, ?string $tenantId = null): bool
     {
-        $stmt = $this->pdo->prepare('DELETE FROM usuarios WHERE id = ?');
-        $stmt->execute([$id]);
+        if ($tenantId !== null) {
+            $stmt = $this->pdo->prepare('DELETE FROM usuarios WHERE id = ? AND tenant_id = ?');
+            $stmt->execute([$id, $tenantId]);
+        } else {
+            $stmt = $this->pdo->prepare('DELETE FROM usuarios WHERE id = ?');
+            $stmt->execute([$id]);
+        }
         return $stmt->rowCount() > 0;
     }
 }

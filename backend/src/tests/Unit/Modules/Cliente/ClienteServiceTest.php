@@ -9,7 +9,7 @@ use Tests\Unit\UnitTestCase;
 
 class ClienteServiceTest extends UnitTestCase
 {
-    private ClienteService    $service;
+    private ClienteService $service;
     private ClienteRepository $repository;
 
     protected function setUp(): void
@@ -24,7 +24,7 @@ class ClienteServiceTest extends UnitTestCase
             ->method('findAll')
             ->willReturn([['id' => 1], ['id' => 2]]);
 
-        $result = $this->service->getAll();
+        $result = $this->service->getAll('tenant-123');
 
         $this->assertCount(2, $result);
     }
@@ -36,7 +36,7 @@ class ClienteServiceTest extends UnitTestCase
             ->willThrowException(new NotFoundException('Cliente', 99));
 
         $this->expectException(NotFoundException::class);
-        $this->service->get(99);
+        $this->service->get(99, 'tenant-123');
     }
 
     public function test_delete_returns_true_on_success(): void
@@ -45,6 +45,6 @@ class ClienteServiceTest extends UnitTestCase
             ->method('delete')
             ->willReturn(true);
 
-        $this->assertTrue($this->service->delete(1));
+        $this->assertTrue($this->service->delete(1, 'tenant-123'));
     }
 }

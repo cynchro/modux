@@ -4,6 +4,7 @@ namespace App\Exceptions;
 
 use App\Support\Logger;
 use App\Support\Config;
+use App\Exceptions\MethodNotAllowedException;
 
 class Handler
 {
@@ -13,20 +14,32 @@ class Handler
 
     public function handle(\Throwable $e): void
     {
-        $this->logger->error($e->getMessage(), [
-            'exception' => get_class($e),
-            'file'      => $e->getFile(),
-            'line'      => $e->getLine(),
-            'trace'     => $e->getTraceAsString(),
-        ]);
-
         $status = $this->resolveStatus($e);
-        $body   = $this->resolveBody($e);
+
+        if ($status >= 500) {
+            $this->logger->error($e->getMessage(), [
+                'exception' => get_class($e),
+                'file'      => $e->getFile(),
+                'line'      => $e->getLine(),
+                'trace'     => $e->getTraceAsString(),
+            ]);
+        } else {
+            $this->logger->warning($e->getMessage(), [
+                'exception' => get_class($e),
+                'status'    => $status,
+            ]);
+        }
+
+        $body = $this->resolveBody($e);
 
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($body, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        exit;
+
+        if ($e instanceof MethodNotAllowedException) {
+            header('Allow: ' . implode(', ', $e->getAllowedMethods()));
+        }
+
+        echo json_encode($body, JSON_UNESCAPED_UNICODE);
     }
 
     private function resolveStatus(\Throwable $e): int
@@ -68,6 +81,16 @@ class Handler
                 return false;
             }
             throw new \ErrorException($message, 0, $severity, $file, $line);
+        });
+
+        register_shutdown_function(function () use ($logger): void {
+            $error = error_get_last();
+            if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+                $logger->error('Fatal error', $error);
+                http_response_code(500);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'An internal server error occurred.'], JSON_UNESCAPED_UNICODE);
+            }
         });
     }
 }

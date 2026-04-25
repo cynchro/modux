@@ -32,16 +32,12 @@ class PermisosService
 
     public function asignar(int $rolId, array $permisos): void
     {
-        foreach ($permisos as $permisoId) {
-            $this->repository->asignar($rolId, (int) $permisoId);
-        }
+        $this->repository->asignarBatch($rolId, array_map('intval', $permisos));
     }
 
     public function desasignar(int $rolId, array $permisos): void
     {
-        foreach ($permisos as $permisoId) {
-            $this->repository->desasignar($rolId, (int) $permisoId);
-        }
+        $this->repository->desasignarBatch($rolId, array_map('intval', $permisos));
     }
 
     public function createPermiso(string $key, string $descripcion): int

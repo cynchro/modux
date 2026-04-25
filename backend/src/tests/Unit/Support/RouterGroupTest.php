@@ -13,7 +13,7 @@ use Tests\Unit\UnitTestCase;
 
 class RouterGroupTest extends UnitTestCase
 {
-    private Router    $router;
+    private Router $router;
     private Container $container;
 
     protected function setUp(): void

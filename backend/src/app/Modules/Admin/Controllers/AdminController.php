@@ -12,9 +12,9 @@ use App\Modules\Usuario\Services\UsuariosService;
 class AdminController
 {
     public function __construct(
-        private RolService      $rolService,
+        private RolService $rolService,
         private PermisosService $permisosService,
-        private AuthService     $authService,
+        private AuthService $authService,
         private UsuariosService $usuariosService
     ) {
     }
@@ -116,16 +116,20 @@ class AdminController
 
     public function users(Request $request): Response
     {
-        $data = $this->usuariosService->getAll();
+        $page     = max(1, (int) $request->input('page', 1));
+        $perPage  = max(1, (int) $request->input('perPage', 10));
+        $tenantId = $request->tenantId();
+        $data     = $this->usuariosService->getAll($page, $perPage, $tenantId);
 
         return Response::success($data['results'] ?? []);
     }
 
     public function impersonate(Request $request): Response
     {
-        $adminId  = (int) $request->user()['id'];
-        $targetId = (int) $request->input('userId');
-        $token    = $this->authService->impersonate($adminId, $targetId);
+        $adminId      = (int) ($request->user()['sub'] ?? 0);
+        $targetId     = (int) $request->input('userId');
+        $adminTenantId = $request->tenantId();
+        $token        = $this->authService->impersonate($adminId, $targetId, $adminTenantId);
 
         return Response::success(['token' => $token]);
     }

@@ -58,14 +58,4 @@ class TenantMiddlewareTest extends UnitTestCase
 
         $this->middleware->handle($request, fn () => Response::success([]));
     }
-
-    /** @param array<string, mixed>|null $user */
-    private function makeRequest(?array $user): Request
-    {
-        $request = new Request();
-        if ($user !== null) {
-            $request->setUser($user);
-        }
-        return $request;
-    }
 }

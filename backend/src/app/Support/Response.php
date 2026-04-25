@@ -4,9 +4,9 @@ namespace App\Support;
 
 class Response
 {
-    private int     $status  = 200;
-    private array   $headers = ['Content-Type' => 'application/json; charset=utf-8'];
-    private ?array  $body    = null;
+    private int $status  = 200;
+    private array $headers = ['Content-Type' => 'application/json; charset=utf-8'];
+    private ?array $body    = null;
     private ?string $rawBody = null;
 
     public function withStatus(int $status): static
@@ -34,8 +34,8 @@ class Response
     public static function success(array $data = [], int $status = 200): static
     {
         return (new static())->json([
-            'success'  => true,
-            'response' => $data,
+            'success' => true,
+            'data'    => $data,
         ], $status);
     }
 
@@ -43,7 +43,7 @@ class Response
     {
         return (new static())->json([
             'success' => false,
-            'error'   => $message,
+            'message' => $message,
         ], $status);
     }
 
@@ -81,7 +81,10 @@ class Response
         if ($this->rawBody !== null) {
             echo $this->rawBody;
         } elseif ($this->body !== null) {
-            echo json_encode($this->body, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            $encoded = json_encode($this->body, JSON_UNESCAPED_UNICODE);
+            echo $encoded !== false
+                ? $encoded
+                : '{"success":false,"message":"Response encoding error."}';
         }
     }
 }

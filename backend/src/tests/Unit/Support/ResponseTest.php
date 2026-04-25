@@ -69,7 +69,7 @@ class ResponseTest extends UnitTestCase
 
         $decoded = json_decode((string) $output, true);
         $this->assertTrue($decoded['success']);
-        $this->assertSame('John', $decoded['response']['name']);
+        $this->assertSame('John', $decoded['data']['name']);
     }
 
     public function test_send_outputs_html(): void

@@ -2,7 +2,6 @@
 
 namespace App\Modules\Usuario\Services;
 
-use App\Exceptions\NotFoundException;
 use App\Modules\Usuario\Repositories\UsuariosRepository;
 
 class UsuariosService
@@ -11,24 +10,14 @@ class UsuariosService
     {
     }
 
-    public function getAll(): array
+    public function getAll(int $page = 1, int $perPage = 10, ?string $tenantId = null): array
     {
-        return $this->repository->find();
+        return $this->repository->find($page, $perPage, $tenantId);
     }
 
-    public function get(int $id): array
+    public function get(int $id, ?string $tenantId = null): array
     {
-        return $this->repository->findById($id);
-    }
-
-    public function create(array $data): bool
-    {
-        return $this->repository->create($data);
-    }
-
-    public function update(array $data): bool
-    {
-        return $this->repository->update($data);
+        return $this->repository->findById($id, $tenantId);
     }
 
     public function updateSucursal(int $userId, int $sucursalId): bool
@@ -36,8 +25,8 @@ class UsuariosService
         return $this->repository->updateSucursal($userId, $sucursalId);
     }
 
-    public function delete(int $id): bool
+    public function delete(int $id, ?string $tenantId = null): bool
     {
-        return $this->repository->delete($id);
+        return $this->repository->delete($id, $tenantId);
     }
 }

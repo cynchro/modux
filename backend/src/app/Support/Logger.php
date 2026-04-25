@@ -10,7 +10,7 @@ class Logger implements LoggerInterface
     use LoggerTrait;
 
     private string $channel;
-    private array  $channelConfig;
+    private array $channelConfig;
     private string $minLevel;
 
     private const LEVELS = [

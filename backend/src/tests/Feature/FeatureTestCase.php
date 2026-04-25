@@ -12,6 +12,7 @@ use App\Support\Request;
 use App\Http\Middleware\CorsMiddleware;
 use App\Http\Middleware\SecurityHeadersMiddleware;
 use App\Http\Middleware\RequestLoggerMiddleware;
+use App\Support\Request as AppRequest;
 
 abstract class FeatureTestCase extends TestCase
 {
@@ -27,14 +28,12 @@ abstract class FeatureTestCase extends TestCase
 
         // Minimal services for feature tests
         $this->app->singleton(\App\Support\Logger::class, fn () =>
-            new \App\Support\Logger(Config::all('logging'))
-        );
+            new \App\Support\Logger(Config::all('logging')));
 
         \App\Exceptions\Handler::register($this->app->get(\App\Support\Logger::class));
 
         $this->app->singleton(\App\Support\Router::class, fn ($c) =>
-            new Router($c)
-        );
+            new Router($c));
 
         // Load module routes
         $router = $this->app->get(Router::class);
@@ -88,16 +87,18 @@ abstract class FeatureTestCase extends TestCase
         return ['Authorization' => "Bearer {$token}"];
     }
 
+    protected function tearDown(): void
+    {
+        AppRequest::setTestInputStream(null);
+        $_SERVER = [];
+        $_POST   = [];
+        $_GET    = [];
+        parent::tearDown();
+    }
+
     private function setInputStream(string $content): void
     {
-        // Override the global input stream for testing
-        $stream = fopen('php://memory', 'r+');
-        fwrite($stream, $content);
-        rewind($stream);
-
-        // Store reference so the Request can read it
-        // Note: actual php://input override requires stream wrapper in real test
-        // This is a stub — for real feature tests use a real HTTP client or mock
-        $_POST = json_decode($content, true) ?? [];
+        AppRequest::setTestInputStream($content);
+        $_POST = [];
     }
 }

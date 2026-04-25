@@ -57,12 +57,56 @@ class PermisosRepository
         $stmt->execute([$rolId, $permisoId, 2]);
     }
 
+    /** @param list<int> $permisoIds */
+    public function asignarBatch(int $rolId, array $permisoIds): void
+    {
+        if (empty($permisoIds)) {
+            return;
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO roles_permisos (rol, permiso, estado) VALUES (?, ?, ?)'
+            );
+            foreach ($permisoIds as $permisoId) {
+                $stmt->execute([$rolId, $permisoId, 2]);
+            }
+            $this->pdo->commit();
+        } catch (\PDOException $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public function desasignar(int $rolId, int $permisoId): void
     {
         $stmt = $this->pdo->prepare(
             'DELETE FROM roles_permisos WHERE rol = ? AND permiso = ?'
         );
         $stmt->execute([$rolId, $permisoId]);
+    }
+
+    /** @param list<int> $permisoIds */
+    public function desasignarBatch(int $rolId, array $permisoIds): void
+    {
+        if (empty($permisoIds)) {
+            return;
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $stmt = $this->pdo->prepare(
+                'DELETE FROM roles_permisos WHERE rol = ? AND permiso = ?'
+            );
+            foreach ($permisoIds as $permisoId) {
+                $stmt->execute([$rolId, $permisoId]);
+            }
+            $this->pdo->commit();
+        } catch (\PDOException $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
     }
 
     public function createPermiso(string $key, string $descripcion): int

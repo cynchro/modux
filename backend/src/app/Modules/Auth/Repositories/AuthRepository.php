@@ -15,24 +15,17 @@ class AuthRepository
     public function create(string $username, string $hashedPassword, int $rol): array
     {
         try {
-            $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM usuarios WHERE usuario = ?');
-            $stmt->execute([$username]);
-
-            if ($stmt->fetchColumn() > 0) {
-                throw new \Exception('El usuario ya existe en el sistema.');
-            }
-
             $stmt = $this->pdo->prepare(
                 'INSERT INTO usuarios (usuario, clave, rol) VALUES (?, ?, ?)'
             );
             $stmt->execute([$username, $hashedPassword, $rol]);
-
             return ['id' => $this->pdo->lastInsertId()];
-        } catch (\Exception $e) {
-            if ($e instanceof DatabaseException) {
-                throw $e;
+        } catch (\PDOException $e) {
+            // SQLSTATE 23000: integrity constraint violation (duplicate unique key)
+            if ($e->getCode() === '23000') {
+                throw new \Exception('El usuario ya existe en el sistema.');
             }
-            throw new \Exception($e->getMessage());
+            throw new DatabaseException('Error al crear el usuario.');
         }
     }
 
@@ -70,7 +63,7 @@ class AuthRepository
     public function findUserByToken(string $token): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT u.id, u.usuario, u.rol, r.nombre AS nombre_rol
+            'SELECT u.id, u.usuario, u.rol, u.tenant_id, r.nombre AS nombre_rol
              FROM usuarios u
              LEFT JOIN roles r ON u.rol = r.id
              WHERE u.token = ?'
@@ -91,13 +84,42 @@ class AuthRepository
     public function findUserById(int|string $userId): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT u.id, u.usuario, u.rol, r.nombre
+            'SELECT u.id, u.usuario, u.rol, u.tenant_id, r.nombre
              FROM usuarios u
              LEFT JOIN roles r ON u.rol = r.id
              WHERE u.id = ?'
         );
         $stmt->execute([$userId]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function saveRefreshToken(int $userId, string $token, string $expiresAt): void
+    {
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
+        );
+        $stmt->execute([$userId, $token, $expiresAt]);
+    }
+
+    public function findRefreshToken(string $token): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > NOW()'
+        );
+        $stmt->execute([$token]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function deleteRefreshToken(string $token): void
+    {
+        $stmt = $this->pdo->prepare('DELETE FROM refresh_tokens WHERE token = ?');
+        $stmt->execute([$token]);
+    }
+
+    public function deleteAllRefreshTokens(int $userId): void
+    {
+        $stmt = $this->pdo->prepare('DELETE FROM refresh_tokens WHERE user_id = ?');
+        $stmt->execute([$userId]);
     }
 
     public function findUserPermissions(string $token, string $key): array

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Http\Middleware\AuthMiddleware;
+use App\Exceptions\MethodNotAllowedException;
 use App\Exceptions\NotFoundException;
 use App\Support\Contracts\MiddlewareInterface;
 
@@ -129,6 +130,24 @@ class Router
             return $pipeline->run($request, function (Request $req) use ($route): Response {
                 return $this->callAction($req, $route['action']);
             });
+        }
+
+        // Path exists for another method → 405 instead of 404
+        $allowedMethods = [];
+        foreach ($this->routes as $registeredMethod => $routes) {
+            if ($registeredMethod === $method) {
+                continue;
+            }
+            foreach (array_keys($routes) as $pattern) {
+                if (preg_match($pattern, $path)) {
+                    $allowedMethods[] = $registeredMethod;
+                    break;
+                }
+            }
+        }
+
+        if (!empty($allowedMethods)) {
+            throw new MethodNotAllowedException($allowedMethods);
         }
 
         throw new NotFoundException('Route', $method . ' ' . $path);

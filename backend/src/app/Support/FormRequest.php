@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Exceptions\ForbiddenException;
 use App\Exceptions\ValidationException;
 
 abstract class FormRequest
@@ -11,7 +12,10 @@ abstract class FormRequest
     public function __construct(array $data = [])
     {
         $this->data = $data;
-        $this->authorize();
+
+        if (!$this->authorize()) {
+            throw new ForbiddenException('This action is not authorized.');
+        }
 
         $errors = Validator::validate($this->data, $this->rules());
 
@@ -22,8 +26,9 @@ abstract class FormRequest
 
     abstract protected function rules(): array;
 
-    protected function authorize(): void
+    protected function authorize(): bool
     {
+        return true;
     }
 
     public function input(string $key, mixed $default = null): mixed

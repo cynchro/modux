@@ -12,15 +12,18 @@ class UsuarioServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->container->singleton(UsuariosRepository::class, fn ($c) =>
-            new UsuariosRepository($c->get(\PDO::class))
-        );
+            new UsuariosRepository($c->get(\PDO::class)));
 
         $this->container->singleton(UsuariosService::class, fn ($c) =>
-            new UsuariosService($c->get(UsuariosRepository::class))
-        );
+            new UsuariosService($c->get(UsuariosRepository::class)));
 
         $this->container->singleton(UsuarioController::class, fn ($c) =>
-            new UsuarioController($c->get(UsuariosService::class))
-        );
+            new UsuarioController($c->get(UsuariosService::class)));
+    }
+
+    public function boot(): void
+    {
+        $router = $this->container->get(\App\Support\Router::class);
+        require __DIR__ . '/routes.php';
     }
 }

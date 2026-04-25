@@ -12,15 +12,18 @@ class ClienteServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->container->singleton(ClienteRepository::class, fn ($c) =>
-            new ClienteRepository($c->get(\PDO::class))
-        );
+            new ClienteRepository($c->get(\PDO::class)));
 
         $this->container->singleton(ClienteService::class, fn ($c) =>
-            new ClienteService($c->get(ClienteRepository::class))
-        );
+            new ClienteService($c->get(ClienteRepository::class)));
 
         $this->container->singleton(ClienteController::class, fn ($c) =>
-            new ClienteController($c->get(ClienteService::class))
-        );
+            new ClienteController($c->get(ClienteService::class)));
+    }
+
+    public function boot(): void
+    {
+        $router = $this->container->get(\App\Support\Router::class);
+        require __DIR__ . '/routes.php';
     }
 }

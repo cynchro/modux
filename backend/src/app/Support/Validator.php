@@ -75,13 +75,13 @@ class Validator
                 break;
 
             case 'min':
-                if ($value !== null && strlen((string) $value) < (int) $ruleParam) {
+                if ($value !== null && mb_strlen((string) $value) < (int) $ruleParam) {
                     $this->addError($field, "{$field} must be at least {$ruleParam} characters.");
                 }
                 break;
 
             case 'max':
-                if ($value !== null && strlen((string) $value) > (int) $ruleParam) {
+                if ($value !== null && mb_strlen((string) $value) > (int) $ruleParam) {
                     $this->addError($field, "{$field} must be no more than {$ruleParam} characters.");
                 }
                 break;
@@ -115,6 +115,49 @@ class Validator
                 $confirmation = $data["{$field}_confirmation"] ?? null;
                 if ($value !== $confirmation) {
                     $this->addError($field, "{$field} confirmation does not match.");
+                }
+                break;
+
+            case 'string':
+                if ($value !== null && !is_string($value)) {
+                    $this->addError($field, "{$field} must be a string.");
+                }
+                break;
+
+            case 'array':
+                if ($value !== null && !is_array($value)) {
+                    $this->addError($field, "{$field} must be an array.");
+                }
+                break;
+
+            case 'url':
+                if ($value !== null && $value !== '' && !filter_var($value, FILTER_VALIDATE_URL)) {
+                    $this->addError($field, "{$field} must be a valid URL.");
+                }
+                break;
+
+            case 'date':
+                if ($value !== null && $value !== '') {
+                    $format = $ruleParam ?? 'Y-m-d';
+                    $parsed = \DateTimeImmutable::createFromFormat($format, (string) $value);
+                    if (!$parsed || $parsed->format($format) !== (string) $value) {
+                        $this->addError($field, "{$field} must be a valid date ({$format}).");
+                    }
+                }
+                break;
+
+            case 'regex':
+                if ($value !== null && $value !== '' && $ruleParam !== null) {
+                    if (@preg_match($ruleParam, (string) $value) !== 1) {
+                        $this->addError($field, "{$field} format is invalid.");
+                    }
+                }
+                break;
+
+            case 'uuid':
+                $uuidPattern = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
+                if ($value !== null && $value !== '' && !preg_match($uuidPattern, (string) $value)) {
+                    $this->addError($field, "{$field} must be a valid UUID.");
                 }
                 break;
 

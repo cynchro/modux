@@ -2,9 +2,12 @@
 
 use App\Modules\Cliente\Controllers\ClienteController;
 use App\Http\Middleware\AuthMiddleware;
+use App\Http\Middleware\TenantMiddleware;
 
-$router->get('/clientes',       [ClienteController::class, 'index'],  [AuthMiddleware::class]);
-$router->get('/clientes/{id}',  [ClienteController::class, 'show'],   [AuthMiddleware::class]);
-$router->post('/clientes',      [ClienteController::class, 'create'], [AuthMiddleware::class]);
-$router->put('/clientes/{id}',  [ClienteController::class, 'update'], [AuthMiddleware::class]);
-$router->delete('/clientes/{id}', [ClienteController::class, 'delete'], [AuthMiddleware::class]);
+$router->group([AuthMiddleware::class, TenantMiddleware::class], function ($router) {
+    $router->get('/clientes', [ClienteController::class, 'index']);
+    $router->get('/clientes/{id}', [ClienteController::class, 'show']);
+    $router->post('/clientes', [ClienteController::class, 'create']);
+    $router->put('/clientes/{id}', [ClienteController::class, 'update']);
+    $router->delete('/clientes/{id}', [ClienteController::class, 'delete']);
+});

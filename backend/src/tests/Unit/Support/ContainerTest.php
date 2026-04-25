@@ -51,9 +51,10 @@ class ContainerTest extends UnitTestCase
         $this->assertTrue($this->container->has('key'));
     }
 
-    public function test_has_returns_true_for_existing_class(): void
+    public function test_has_returns_false_for_unregistered_class(): void
     {
-        $this->assertTrue($this->container->has(\stdClass::class));
+        // PSR-11: has() only reflects explicit registrations, not autowirable classes
+        $this->assertFalse($this->container->has(\stdClass::class));
     }
 
     public function test_has_returns_false_for_unknown_key(): void

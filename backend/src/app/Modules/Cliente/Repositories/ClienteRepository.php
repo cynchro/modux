@@ -12,17 +12,18 @@ class ClienteRepository
     }
 
     /** @return list<array<string, mixed>> */
-    public function findAll(): array
+    public function findAll(string $tenantId): array
     {
-        $stmt = $this->pdo->query('SELECT * FROM clientes');
+        $stmt = $this->pdo->prepare('SELECT * FROM clientes WHERE tenant_id = ?');
+        $stmt->execute([$tenantId]);
         return (array) $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /** @return array<string, mixed> */
-    public function findById(int $id): array
+    public function findById(int $id, string $tenantId): array
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM clientes WHERE id = ?');
-        $stmt->execute([$id]);
+        $stmt = $this->pdo->prepare('SELECT * FROM clientes WHERE id = ? AND tenant_id = ?');
+        $stmt->execute([$id, $tenantId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$row) {
@@ -37,16 +38,12 @@ class ClienteRepository
      * @return array<string, mixed>
      *
      * TODO: replace with your actual columns:
-     *   $stmt = $this->pdo->prepare('INSERT INTO clientes (col1, col2) VALUES (?, ?)');
-     *   $stmt->execute([$data['col1'], $data['col2']]);
-     *   return $this->findById((int) $this->pdo->lastInsertId());
+     *   $stmt = $this->pdo->prepare('INSERT INTO clientes (col1, col2, tenant_id) VALUES (?, ?, ?)');
+     *   $stmt->execute([$data['col1'], $data['col2'], $tenantId]);
+     *   return $this->findById((int) $this->pdo->lastInsertId(), $tenantId);
      */
-    public function create(array $data): array
+    public function create(array $data, string $tenantId): array
     {
-        // TODO: replace with your actual columns
-        // $stmt = $this->pdo->prepare('INSERT INTO clientes (col1, col2) VALUES (?, ?)');
-        // $stmt->execute([$data['col1'], $data['col2']]);
-        // return $this->findById((int) $this->pdo->lastInsertId());
         throw new \RuntimeException('create() not implemented yet.');
     }
 
@@ -54,23 +51,19 @@ class ClienteRepository
      * @param array<string, mixed> $data
      *
      * TODO: replace with your actual columns:
-     *   $stmt = $this->pdo->prepare('UPDATE clientes SET col1 = ? WHERE id = ?');
-     *   $stmt->execute([$data['col1'], $id]);
+     *   $stmt = $this->pdo->prepare('UPDATE clientes SET col1 = ? WHERE id = ? AND tenant_id = ?');
+     *   $stmt->execute([$data['col1'], $id, $tenantId]);
      *   return $stmt->rowCount() > 0;
      */
-    public function update(int $id, array $data): bool
+    public function update(int $id, array $data, string $tenantId): bool
     {
-        // TODO: replace with your actual columns
-        // $stmt = $this->pdo->prepare('UPDATE clientes SET col1 = ? WHERE id = ?');
-        // $stmt->execute([$data['col1'], $id]);
-        // return $stmt->rowCount() > 0;
         throw new \RuntimeException('update() not implemented yet.');
     }
 
-    public function delete(int $id): bool
+    public function delete(int $id, string $tenantId): bool
     {
-        $stmt = $this->pdo->prepare('DELETE FROM clientes WHERE id = ?');
-        $stmt->execute([$id]);
+        $stmt = $this->pdo->prepare('DELETE FROM clientes WHERE id = ? AND tenant_id = ?');
+        $stmt->execute([$id, $tenantId]);
         return $stmt->rowCount() > 0;
     }
 }

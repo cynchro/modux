@@ -8,9 +8,9 @@ use Tests\Unit\UnitTestCase;
 
 class FormRequestTest extends UnitTestCase
 {
-    private function makeRequest(array $rules, array $data): FormRequest
+    private function makeFormRequest(array $rules, array $data): FormRequest
     {
-        return new class($data, $rules) extends FormRequest {
+        return new class ($data, $rules) extends FormRequest {
             public function __construct(array $data, private array $ruleSet)
             {
                 parent::__construct($data);
@@ -25,7 +25,7 @@ class FormRequestTest extends UnitTestCase
 
     public function test_validated_returns_only_declared_fields(): void
     {
-        $request = $this->makeRequest(
+        $request = $this->makeFormRequest(
             ['nombre' => 'required', 'email' => 'required|email'],
             ['nombre' => 'Juan', 'email' => 'juan@test.com', 'admin' => true, 'extra' => 'ignored']
         );
@@ -40,32 +40,32 @@ class FormRequestTest extends UnitTestCase
     public function test_all_returns_everything(): void
     {
         $data    = ['nombre' => 'Juan', 'extra' => 'included'];
-        $request = $this->makeRequest(['nombre' => 'required'], $data);
+        $request = $this->makeFormRequest(['nombre' => 'required'], $data);
 
         $this->assertSame($data, $request->all());
     }
 
     public function test_input_returns_value_by_key(): void
     {
-        $request = $this->makeRequest(['nombre' => 'required'], ['nombre' => 'Ana']);
+        $request = $this->makeFormRequest(['nombre' => 'required'], ['nombre' => 'Ana']);
         $this->assertSame('Ana', $request->input('nombre'));
     }
 
     public function test_input_returns_default_when_missing(): void
     {
-        $request = $this->makeRequest(['nombre' => 'required'], ['nombre' => 'Ana']);
+        $request = $this->makeFormRequest(['nombre' => 'required'], ['nombre' => 'Ana']);
         $this->assertSame('default', $request->input('missing', 'default'));
     }
 
     public function test_throws_when_required_field_missing(): void
     {
         $this->expectException(ValidationException::class);
-        $this->makeRequest(['nombre' => 'required'], []);
+        $this->makeFormRequest(['nombre' => 'required'], []);
     }
 
     public function test_validated_with_empty_rules_returns_empty(): void
     {
-        $request   = $this->makeRequest([], ['nombre' => 'Juan', 'extra' => 'ignored']);
+        $request   = $this->makeFormRequest([], ['nombre' => 'Juan', 'extra' => 'ignored']);
         $this->assertSame([], $request->validated());
     }
 
@@ -73,7 +73,7 @@ class FormRequestTest extends UnitTestCase
     {
         // Router group test via FormRequest is separate — this ensures
         // validated() works when rules are a subset of data
-        $request = $this->makeRequest(
+        $request = $this->makeFormRequest(
             ['a' => 'required', 'b' => 'required'],
             ['a' => '1', 'b' => '2', 'c' => '3']
         );

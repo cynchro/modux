@@ -5,15 +5,23 @@ namespace App\Modules\Admin\Services;
 class LogService
 {
     private string $logFile;
-    private array  $logs        = [];
-    private int    $logsPerPage = 15;
-    private int    $totalLogs   = 0;
-    private int    $totalPages  = 0;
+    private array $logs        = [];
+    private int $logsPerPage = 15;
+    private int $totalLogs   = 0;
+    private int $totalPages  = 0;
+    private bool $loaded      = false;
 
     public function __construct(?string $logPath = null)
     {
         $this->logFile = $logPath ?? dirname(__DIR__, 4) . '/storage/logs/app.log';
-        $this->loadLogs();
+    }
+
+    private function ensureLoaded(): void
+    {
+        if (!$this->loaded) {
+            $this->loadLogs();
+            $this->loaded = true;
+        }
     }
 
     private function loadLogs(): void
@@ -69,12 +77,14 @@ class LogService
 
     public function getPaginatedLogs(int $page = 1): array
     {
+        $this->ensureLoaded();
         $start = ($page - 1) * $this->logsPerPage;
         return array_slice($this->logs, $start, $this->logsPerPage);
     }
 
     public function getPaginationData(): array
     {
+        $this->ensureLoaded();
         return [
             'totalLogs'  => $this->totalLogs,
             'totalPages' => $this->totalPages,
@@ -83,6 +93,7 @@ class LogService
 
     public function getLogDetail(int $index): ?array
     {
+        $this->ensureLoaded();
         $log = $this->logs[$index] ?? null;
 
         if ($log === null) {
@@ -95,11 +106,11 @@ class LogService
                 'exception'  => $ctx['exception'] ?? null,
                 'file'       => $ctx['file'] ?? null,
                 'line'       => $ctx['line'] ?? null,
-                'stack_trace'=> $ctx['trace'] ?? null,
+                'stack_trace' => $ctx['trace'] ?? null,
                 'ip'         => $ctx['ip'] ?? null,
                 'uri'        => $ctx['uri'] ?? null,
                 'method'     => $ctx['method'] ?? null,
-                'duration_ms'=> $ctx['duration_ms'] ?? null,
+                'duration_ms' => $ctx['duration_ms'] ?? null,
             ]);
         }
 
@@ -117,12 +128,24 @@ class LogService
             'url'         => null,
         ];
 
-        if (preg_match('/IP Address:\s*(.*)/', $text, $m))                                       $out['ip']          = trim($m[1]);
-        if (preg_match('/Stack Trace:\s*(.*?)(?=\nInput Data:|\nUser ID:|$)/s', $text, $m))      $out['stack_trace'] = trim($m[1]);
-        if (preg_match('/Archivo:\s*(.*)/', $text, $m))                                           $out['file']        = trim($m[1]);
-        if (preg_match('/Línea:\s*(.*)/', $text, $m))                                             $out['line']        = trim($m[1]);
-        if (preg_match('/User ID:\s*(.*)/', $text, $m))                                           $out['user_id']     = trim($m[1]);
-        if (preg_match('/URL:\s*(http[s]?:\/\/[^\s]+)/', $text, $m))                             $out['url']         = trim($m[1]);
+        if (preg_match('/IP Address:\s*(.*)/', $text, $m)) {
+            $out['ip']          = trim($m[1]);
+        }
+        if (preg_match('/Stack Trace:\s*(.*?)(?=\nInput Data:|\nUser ID:|$)/s', $text, $m)) {
+            $out['stack_trace'] = trim($m[1]);
+        }
+        if (preg_match('/Archivo:\s*(.*)/', $text, $m)) {
+            $out['file']        = trim($m[1]);
+        }
+        if (preg_match('/Línea:\s*(.*)/', $text, $m)) {
+            $out['line']        = trim($m[1]);
+        }
+        if (preg_match('/User ID:\s*(.*)/', $text, $m)) {
+            $out['user_id']     = trim($m[1]);
+        }
+        if (preg_match('/URL:\s*(http[s]?:\/\/[^\s]+)/', $text, $m)) {
+            $out['url']         = trim($m[1]);
+        }
 
         return $out;
     }

@@ -14,28 +14,17 @@ class UsuarioController
 
     public function index(Request $request): Response
     {
-        $data = $this->service->getAll();
+        $page     = max(1, (int) $request->input('page', 1));
+        $perPage  = max(1, (int) $request->input('perPage', 10));
+        $data     = $this->service->getAll($page, $perPage, $request->tenantId());
         return Response::success($data);
     }
 
     public function show(Request $request): Response
     {
         $id   = (int) $request->route('id');
-        $user = $this->service->get($id);
+        $user = $this->service->get($id, $request->tenantId());
         return Response::success($user);
-    }
-
-    public function create(Request $request): Response
-    {
-        $result = $this->service->create($request->all());
-        return Response::success(['created' => $result], 201);
-    }
-
-    public function update(Request $request): Response
-    {
-        $data   = array_merge($request->all(), ['id' => $request->route('id')]);
-        $result = $this->service->update($data);
-        return Response::success(['updated' => $result]);
     }
 
     public function updateSucursal(Request $request): Response
@@ -49,7 +38,7 @@ class UsuarioController
     public function delete(Request $request): Response
     {
         $id = (int) $request->route('id');
-        $this->service->delete($id);
+        $this->service->delete($id, $request->tenantId());
         return Response::success(['message' => 'Usuario eliminado.']);
     }
 }
