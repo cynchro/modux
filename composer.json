@@ -34,8 +34,9 @@
     },
     "scripts": {
         "test": "vendor/bin/phpunit",
-        "lint": "vendor/bin/phpcs --standard=PSR12 --ignore=vendor app/",
-        "analyse": "vendor/bin/phpstan analyse app/ --level=6 --no-progress"
+        "lint": "vendor/bin/phpcs",
+        "fix": "vendor/bin/phpcbf",
+        "analyse": "vendor/bin/phpstan analyse --no-progress"
     },
     "bin": [
         "modux"
