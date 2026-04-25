@@ -6,16 +6,26 @@ use App\Http\Middleware\AuthMiddleware;
 use App\Http\Middleware\AdminMiddleware;
 
 $router->group([AuthMiddleware::class, AdminMiddleware::class], function ($router) {
-    $router->get('/admin',                           [AdminController::class, 'home']);
-    $router->get('/admin/roles',                     [AdminController::class, 'roles']);
-    $router->get('/admin/roles/abm/{id}',            [AdminController::class, 'rolesABM']);
-    $router->post('/admin/roles/createOrUpdate',     [AdminController::class, 'gestionarRoles']);
-    $router->get('/admin/permisos',                  [AdminController::class, 'permisos']);
-    $router->get('/admin/permisos/abm/{id}',         [AdminController::class, 'permisosABM']);
-    $router->post('/admin/permisos/createOrUpdate',  [AdminController::class, 'gestionarPermisos']);
-    $router->get('/admin/impersonalizar',            [AdminController::class, 'impersonalizar']);
-    $router->post('/admin/impersonalizar',           [AdminController::class, 'loguear']);
-    $router->get('/admin/logs',                      [LogsController::class, 'index']);
-    $router->get('/admin/logs/{id}',                 [LogsController::class, 'show']);
-    $router->post('/admin/logs/delete-all',          [LogsController::class, 'deleteAll']);
+    // Roles
+    $router->get('/admin/roles',                [AdminController::class, 'indexRoles']);
+    $router->post('/admin/roles',               [AdminController::class, 'storeRole']);
+    $router->get('/admin/roles/{id}',           [AdminController::class, 'showRole']);
+    $router->put('/admin/roles/{id}',           [AdminController::class, 'updateRole']);
+    $router->post('/admin/roles/{id}/assign',   [AdminController::class, 'assignPermisos']);
+    $router->delete('/admin/roles/{id}/assign', [AdminController::class, 'unassignPermisos']);
+
+    // Permisos
+    $router->get('/admin/permisos',             [AdminController::class, 'indexPermisos']);
+    $router->post('/admin/permisos',            [AdminController::class, 'storePermiso']);
+    $router->get('/admin/permisos/{id}',        [AdminController::class, 'showPermiso']);
+    $router->put('/admin/permisos/{id}',        [AdminController::class, 'updatePermiso']);
+
+    // Users & Impersonation
+    $router->get('/admin/users',                [AdminController::class, 'users']);
+    $router->post('/admin/impersonate',         [AdminController::class, 'impersonate']);
+
+    // Logs
+    $router->get('/admin/logs',                 [LogsController::class, 'index']);
+    $router->get('/admin/logs/{id}',            [LogsController::class, 'show']);
+    $router->delete('/admin/logs',              [LogsController::class, 'deleteAll']);
 });

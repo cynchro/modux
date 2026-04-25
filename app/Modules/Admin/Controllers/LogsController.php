@@ -4,7 +4,7 @@ namespace App\Modules\Admin\Controllers;
 
 use App\Support\Request;
 use App\Support\Response;
-use App\Helpers\RenderHelper;
+use App\Exceptions\NotFoundException;
 use App\Modules\Admin\Services\LogService;
 
 class LogsController
@@ -15,31 +15,30 @@ class LogsController
 
     public function index(Request $request): Response
     {
-        $page          = max(1, (int) $request->input('page', 1));
-        $paginatedLogs = $this->logService->getPaginatedLogs($page);
-        $paginationData = $this->logService->getPaginationData();
+        $page = max(1, (int) $request->input('page', 1));
 
-        return RenderHelper::render('Admin.views.logs', [
-            'paginatedLogs'  => $paginatedLogs,
-            'paginationData' => $paginationData,
+        return Response::success([
+            'logs'       => $this->logService->getPaginatedLogs($page),
+            'pagination' => $this->logService->getPaginationData(),
         ]);
     }
 
     public function show(Request $request): Response
     {
-        $index     = (int) $request->route('id');
-        $logDetail = $this->logService->getLogDetail($index);
+        $index  = (int) $request->route('id');
+        $detail = $this->logService->getLogDetail($index);
 
-        if ($logDetail === null) {
-            return Response::redirect('/admin/logs');
+        if ($detail === null) {
+            throw new NotFoundException('Log', $index);
         }
 
-        return RenderHelper::render('Admin.views.logsDetail', ['logDetail' => $logDetail]);
+        return Response::success($detail);
     }
 
     public function deleteAll(Request $request): Response
     {
         $this->logService->deleteAllLogs();
-        return Response::redirect('/admin/logs');
+
+        return Response::success(['deleted' => true]);
     }
 }
