@@ -2,152 +2,98 @@
 
 namespace App\Modules\Auth\Services;
 
-use PDOException;
+use App\Exceptions\AuthException;
 use App\Support\JWTConfig;
 use App\Modules\Auth\Repositories\AuthRepository;
 
 class AuthService
 {
-
-
-    public function register($request): array
+    public function __construct(private AuthRepository $repository)
     {
-        try {
-            $hashedClave = password_hash($request->getClave(), PASSWORD_BCRYPT);
-            return AuthRepository::create($request->getUsuario(), $hashedClave, $request->getRol());
-        } catch (PDOException $e) {
-            throw new \Exception('Error al registrar el usuario. Inténtalo más tarde.');
+    }
+
+    public function register(array $data): array
+    {
+        $hashed = password_hash($data['clave'], PASSWORD_BCRYPT);
+        return $this->repository->create($data['usuario'], $hashed, (int) ($data['rol'] ?? 0));
+    }
+
+    public function update(array $data): bool
+    {
+        $hashed = password_hash($data['clave'], PASSWORD_BCRYPT);
+        return $this->repository->update(
+            $data['usuario'],
+            $hashed,
+            (int) $data['id'],
+            (int) ($data['rol'] ?? 0)
+        );
+    }
+
+    public function updateUser(array $data): bool
+    {
+        return $this->repository->updateUser(
+            $data['usuario'],
+            (int) $data['id'],
+            (int) ($data['rol'] ?? 0)
+        );
+    }
+
+    public function login(array $data): string
+    {
+        $user = $this->repository->findUserByName($data['usuario']);
+
+        if (!$user || !password_verify($data['clave'], $user['clave'])) {
+            throw new AuthException('Invalid credentials.', 401);
+        }
+
+        $token = JWTConfig::generateToken($user['id'], $user['tenant_id'] ?? null);
+        $this->repository->updateToken($user['id'], $token);
+
+        return $token;
+    }
+
+    public function logout(string $token): void
+    {
+        $cleared = $this->repository->clearToken($token);
+
+        if (!$cleared) {
+            throw new AuthException('Invalid token or already logged out.', 401);
         }
     }
 
-    public function update($request): bool
+    public function me(string $token): array
     {
-        try {
-            $hashedClave = password_hash($request->getClave(), PASSWORD_BCRYPT);
-            return AuthRepository::update($request->getUsuario(), $hashedClave, $request->getId(), $request->getRol());
-        } catch (PDOException $e) {
-            throw new \Exception('Error al actualizar el usuario. Inténtalo más tarde.');
-        }
-    }
-
-    public function updateUser($request): bool
-    {
-        try {
-            return AuthRepository::updateUser($request->getUsuario(), $request->getId(), $request->getRol());
-        } catch (PDOException $e) {
-            throw new \Exception('Error al actualizar el usuario. Inténtalo más tarde.');
-        }
-    }
-
-    public function login($request): array
-    {
-        try {
-            $user = AuthRepository::findUserByName($request->getUsuario());
-            if (!$user) {
-                throw new \Exception('Invalid credentials');
-            }
-
-            if (!password_verify($request->getClave(), $user['user']['clave'])) {
-                throw new \Exception('Invalid credentials');
-            }
-
-            $token = JWTConfig::generateToken($user['user']['id']);
-
-            AuthRepository::updateToken($user['user']['id'], $token);
-
-            return ["token" => $token];
-        } catch (PDOException $e) {
-            throw new \Exception('Error en la base de datos: ' . $e->getMessage());
-        }
-    }
-
-
-
-    public function logout($authHeader)
-    {
-        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            throw new \Exception('Token not provided');
-        }
-
-        $token = $matches[1];
-        $user = AuthRepository::ClearToken($token);
+        $user = $this->repository->findUserByToken($token);
 
         if (!$user) {
-            throw new \Exception('Invalid token or already logged out');
-        }
-    }
-
-
-    public function me($authHeader)
-    {
-        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            throw new \Exception('Token not provided');
+            throw new AuthException('Invalid token or user not found.', 401);
         }
 
-        $token = $matches[1];
-        $user = AuthRepository::findUserByToken($token);
-
-        if (!$user) {
-            throw new \Exception('Invalid token or user not found');
-        }
         return $user;
     }
 
-    public function permisos($authHeader, $key)
+    public function permisos(string $token, string $key): array
     {
-        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            throw new \Exception('Token not provided');
-        }
-
-        $token = $matches[1];
-        $permisos = AuthRepository::findUserPermissions($token, $key);
-
-        return $permisos;
+        return $this->repository->findUserPermissions($token, $key);
     }
 
-    public function impersonate($request): void
+    public function impersonate(int $adminId, int $targetId): string
     {
-        try {
+        $admin = $this->repository->findUserById($adminId);
 
-            // Verificar si el usuario administrador tiene permisos para suplantar
-            $adminUser = AuthRepository::findUserById($request->adminUserId);
-
-            if (!$adminUser || $adminUser['rol'] != 1) { // 1 es Admin
-                throw new \Exception('No tienes permisos para suplantar usuarios.');
-            }
-            // Obtener el usuario objetivo
-            $targetUser = AuthRepository::findUserById($request->targetUserId);
-            if (!$targetUser) {
-                throw new \Exception('El usuario objetivo no existe.');
-            }
-
-            // Generar un token para el usuario objetivo
-            $token = JWTConfig::generateToken($request->targetUserId);
-
-            // Actualizar el token del usuario objetivo
-            AuthRepository::updateToken($request->targetUserId, $token);
-
-            self::cookie($token);
-        } catch (PDOException $e) {
-            echo 'error';die;
-            throw new \Exception('Error en la base de datos: ' . $e->getMessage());
+        if (!$admin || (int) ($admin['rol'] ?? 0) !== 1) {
+            throw new AuthException('No tienes permisos para suplantar usuarios.', 403);
         }
-    }
 
-    public static function cookie($token) {
-        // Verificar si la cookie existe y eliminarla si es necesario
-        if (isset($_COOKIE['auth_token'])) {
-            setcookie('auth_token', '', time() - 3600, '/'); // Expirar la cookie
+        $target = $this->repository->findUserById($targetId);
+
+        if (!$target) {
+            throw new AuthException('El usuario objetivo no existe.', 404);
         }
-    
-        // Establecer la nueva cookie
-        setcookie('auth_token', $token, time() + 3600, '/');
-    
-        echo json_encode([
-            'success' => true,
-            'redirectUrl' => $_ENV['IMPERSONALIZE_URL'] 
-        ]);
-        exit();
+
+        $token = JWTConfig::generateToken($targetId);
+        $this->repository->updateToken($targetId, $token);
+
+        return $token;
     }
-    
 }

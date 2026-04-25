@@ -4,55 +4,53 @@ namespace App\Helpers;
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+use App\Support\Config;
 
 class EmailHelper
 {
-
-    function sendEmail($to, $subject, $htmlFileName, $fromEmail = 'from@example.com', $fromName = 'From Name')
-    {
+    public function sendEmail(
+        string $to,
+        string $subject,
+        string $htmlFileName,
+        ?string $fromEmail = null,
+        ?string $fromName = null
+    ): string {
+        $fromEmail ??= Config::get('mail.from_address', 'hello@example.com');
+        $fromName  ??= Config::get('mail.from_name', 'App');
 
         $mail = new PHPMailer(true);
 
         try {
             $mail->isSMTP();
-            $mail->Host       = 'smtp.mailtrap.io';
+            $mail->Host       = Config::get('mail.host', 'localhost');
             $mail->SMTPAuth   = true;
-            $mail->Username   = 'a5a6694d8c6356';
-            $mail->Password   = '9b158ed0914a47';
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = 2525;
+            $mail->Username   = Config::get('mail.username', '');
+            $mail->Password   = Config::get('mail.password', '');
+            $mail->SMTPSecure = Config::get('mail.encryption', PHPMailer::ENCRYPTION_STARTTLS);
+            $mail->Port       = Config::get('mail.port', 587);
 
             $mail->setFrom($fromEmail, $fromName);
             $mail->addAddress($to);
             $mail->addReplyTo($fromEmail, $fromName);
 
-            // Detectar la ruta del controlador que llamó a este helper
-            $backtrace = debug_backtrace();
-            $callerFile = $backtrace[0]['file'];
+            $backtrace  = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+            $callerFile = $backtrace[1]['file'] ?? '';
+            $modulePath = dirname(dirname($callerFile));
+            $htmlPath   = realpath($modulePath . '/Emails/' . $htmlFileName);
 
-            // Asumimos que la estructura es algo como App/Modules/{ModuleName}/Controllers/{ControllerName}.php
-            $modulePath = dirname(dirname($callerFile));  // Esto nos lleva al directorio del módulo (ej. App/Modules/Product)
-
-            // Construimos la ruta del archivo HTML en la carpeta Emails del módulo
-            $htmlFullPath = realpath($modulePath . '/Emails/' . $htmlFileName);
-
-            // Leer el archivo HTML
-            if ($htmlFullPath && file_exists($htmlFullPath)) {
-                $body = file_get_contents($htmlFullPath);
-            } else {
-                throw new Exception('No se pudo encontrar el archivo HTML: ' . $htmlFullPath);
+            if (!$htmlPath || !file_exists($htmlPath)) {
+                throw new Exception('Email template not found: ' . $htmlFileName);
             }
 
-            // Contenido del email
             $mail->isHTML(true);
             $mail->Subject = $subject;
-            $mail->Body    = $body;
+            $mail->Body    = file_get_contents($htmlPath);
 
-            // Enviar el correo
             $mail->send();
-            return 'El mensaje ha sido enviado con éxito';
+
+            return 'Message sent successfully.';
         } catch (Exception $e) {
-            return "El mensaje no pudo ser enviado. Error de Mailer: {$e->getMessage()}";
+            return 'Message could not be sent. Mailer error: ' . $e->getMessage();
         }
     }
 }

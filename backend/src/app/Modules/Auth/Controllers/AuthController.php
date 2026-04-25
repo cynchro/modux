@@ -3,106 +3,80 @@
 namespace App\Modules\Auth\Controllers;
 
 use App\Support\Request;
-use App\Helpers\ResponseHelper;
+use App\Support\Response;
 use App\Modules\Auth\Requests\AuthRequest;
 use App\Modules\Auth\Services\AuthService;
 
 class AuthController
 {
-
-    public function register(AuthRequest $request)
+    public function __construct(private AuthService $service)
     {
-        $service = new AuthService;
-
-        try {
-            $service->register($request);
-            ResponseHelper::success(['Usuario registrado con éxito']);
-        } catch (\Exception $e) {
-            ResponseHelper::error($e->getMessage());
-        }
     }
 
-    public function update(AuthRequest $request)
+    public function register(AuthRequest $request): Response
     {
-        $service = new AuthService;
-
-        try {
-            $service->update($request);
-            ResponseHelper::success(['Usuario actualizado con éxito']);
-        } catch (\Exception $e) {
-            ResponseHelper::error($e->getMessage());
-        }
+        $result = $this->service->register($request->all());
+        return Response::success($result, 201);
     }
 
-
-    public function login(AuthRequest $request)
+    public function update(AuthRequest $request): Response
     {
-        $service = new AuthService;
-
-        try {
-            $response = $service->login($request);
-            ResponseHelper::success(['token' => $response['token']]);
-        } catch (\Exception $e) {
-            ResponseHelper::error($e->getMessage());
-        }
+        $this->service->update($request->all());
+        return Response::success(['message' => 'Usuario actualizado con éxito.']);
     }
 
-
-    public function logout()
+    public function login(AuthRequest $request): Response
     {
-        $headers = getallheaders();
-        $authHeader = $headers['Authorization'] ?? null;
-
-        $service = new AuthService;
-
-        try {
-            $service->logout($authHeader);
-            ResponseHelper::success(['Logged out successfully']);
-        } catch (\Exception $e) {
-            ResponseHelper::error($e->getMessage());
-        }
+        $token = $this->service->login($request->all());
+        return Response::success(['token' => $token]);
     }
 
-    public function me()
+    public function logout(Request $request): Response
     {
-        $headers = getallheaders();
-        $authHeader = $headers['Authorization'] ?? null;
+        $token = $request->bearerToken();
 
-        $service = new AuthService;
-
-        try {
-            $user = $service->me($authHeader);
-            ResponseHelper::success(['user' => $user]);
-        } catch (\Exception $e) {
-            ResponseHelper::error($e->getMessage());
+        if (!$token) {
+            return Response::error('Token not provided.', 401);
         }
+
+        $this->service->logout($token);
+        return Response::success(['message' => 'Logged out successfully.']);
     }
 
-    public function permisos($key)
+    public function me(Request $request): Response
     {
+        $token = $request->bearerToken();
 
-        $headers = getallheaders();
-        $authHeader = $headers['Authorization'] ?? null;
-
-        $service = new AuthService;
-
-        try {
-            $permisos = $service->permisos($authHeader, $key);
-            ResponseHelper::success($permisos['permisos']);
-        } catch (\Exception $e) {
-            ResponseHelper::error($e->getMessage());
+        if (!$token) {
+            return Response::error('Token not provided.', 401);
         }
+
+        $user = $this->service->me($token);
+        return Response::success(['user' => $user]);
     }
 
-    public function impersonate(Request $request)
+    public function permisos(Request $request): Response
     {
-        $service = new AuthService;
+        $token = $request->bearerToken();
+        $key   = $request->route('key', '');
 
-        try {
-            $response = $service->impersonate($request);
-            ResponseHelper::success(['token' => $response['token']]);
-        } catch (\Exception $e) {
-            ResponseHelper::error($e->getMessage());
+        if (!$token) {
+            return Response::error('Token not provided.', 401);
         }
+
+        $permisos = $this->service->permisos($token, $key);
+        return Response::success($permisos);
+    }
+
+    public function impersonate(Request $request): Response
+    {
+        $adminId  = (int) $request->input('adminUserId');
+        $targetId = (int) $request->input('targetUserId');
+        $token    = $this->service->impersonate($adminId, $targetId);
+
+        return Response::success([
+            'token'       => $token,
+            'redirectUrl' => $_ENV['IMPERSONALIZE_URL'] ?? '',
+        ]);
     }
 }

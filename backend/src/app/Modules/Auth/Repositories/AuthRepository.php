@@ -2,267 +2,115 @@
 
 namespace App\Modules\Auth\Repositories;
 
+use PDO;
 use PDOException;
-use App\Config\Database;
-use App\Helpers\LogHelper;
+use App\Exceptions\DatabaseException;
 
 class AuthRepository
 {
+    public function __construct(private PDO $pdo)
+    {
+    }
 
-    public static function create($username, $hashedPassword, $rol)
+    public function create(string $username, string $hashedPassword, int $rol): array
     {
         try {
-            $connection = Database::getConnection();
-
-            $SQL = "SELECT 
-                COUNT(*) 
-            FROM 
-                usuarios
-            WHERE 
-                usuario = ?";
-            $stmt = $connection->prepare($SQL);
+            $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM usuarios WHERE usuario = ?');
             $stmt->execute([$username]);
 
             if ($stmt->fetchColumn() > 0) {
                 throw new \Exception('El usuario ya existe en el sistema.');
             }
 
-            $SQL = "INSERT INTO 
-                    usuarios 
-                    (usuario, clave, rol) 
-                    VALUES 
-                    (?, ?, ?)";
-            $stmt = $connection->prepare($SQL);
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO usuarios (usuario, clave, rol) VALUES (?, ?, ?)'
+            );
             $stmt->execute([$username, $hashedPassword, $rol]);
-            return ["id" => $connection->lastInsertId()];
-        } catch (PDOException $e) {
-            throw new \Exception('Error en la base de datos: ' . $e->getMessage());
-        }
-    }
 
-    public static function update($username, $hashedPassword, $id, $rol)
-    {
-
-        try {
-            $connection = Database::getConnection();
-            $SQL = "UPDATE usuarios
-                    SET 
-                    usuario = ?,
-                    clave = ?,
-                    rol = ?
-                    WHERE 
-                    id = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$username, $hashedPassword, $rol, $id]);
-            return $stmt->rowCount() > 0;
-        } catch (PDOException $e) {
-            throw new \Exception('Error: ' . $e->getMessage());
-        }
-    }
-
-
-    public static function updateUser($username, $id, $rol)
-    {
-
-        try {
-            $connection = Database::getConnection();
-            $SQL = "UPDATE usuarios
-                    SET 
-                    usuario = ?,
-                    rol = ?
-                    WHERE 
-                    id = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$username, $rol, $id]);
-            return $stmt->rowCount() > 0;
-        } catch (PDOException $e) {
-            throw new \Exception('Error: ' . $e->getMessage());
-        }
-    }
-
-    public static function updateToken($userId, $token)
-    {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "UPDATE 
-                    usuarios 
-                    SET 
-                    token = ? 
-                    WHERE 
-                    id = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$token, $userId]);
-        } catch (PDOException $e) {
-            throw new \Exception('Error: ' . $e->getMessage());
-        }
-    }
-
-    public static function ClearToken($token)
-    {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "UPDATE 
-                    usuarios 
-                    SET 
-                    token = NULL 
-                    WHERE 
-                    token = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$token]);
-
-            return $stmt->rowCount() > 0;
-        } catch (PDOException $e) {
-            throw new \Exception('Error: ' . $e->getMessage());
-        }
-    }
-
-
-    public static function findUserByToken($token)
-    {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT 
-                    usuarios.id,
-                    usuarios.usuario,
-                    usuarios.rol,
-                    roles.nombre as nombre_rol
-                    FROM 
-                    usuarios
-                    LEFT JOIN
-                    roles
-                    ON
-                    usuarios.rol=roles.id
-                    WHERE 
-                    token = ?;";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$token]);
-
-            if ($stmt->rowCount() > 0) {
-                $user = $stmt->fetch(\PDO::FETCH_ASSOC);
-                return $user;
+            return ['id' => $this->pdo->lastInsertId()];
+        } catch (\Exception $e) {
+            if ($e instanceof DatabaseException) {
+                throw $e;
             }
-
-            return null;
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
+            throw new \Exception($e->getMessage());
         }
     }
 
-    public static function findUserPermissions($token, $key)
+    public function update(string $username, string $hashedPassword, int $id, int $rol): bool
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT 
-                        roles_permisos.estado AS permiso
-                    FROM 
-                        usuarios 
-                        LEFT JOIN roles_permisos ON roles_permisos.rol=usuarios.rol
-                        LEFT JOIN permisos ON roles_permisos.permiso=permisos.id
-                    WHERE 
-                        usuarios.token = ?
-                        AND
-                        permisos.key = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$token, $key]);
-
-            if ($stmt->rowCount() > 0) {
-                $permiso = $stmt->fetch(\PDO::FETCH_ASSOC);
-                return ["permisos" => $permiso];
-            }
-
-            return ["permisos" => ["permiso" => 0]];
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare(
+            'UPDATE usuarios SET usuario = ?, clave = ?, rol = ? WHERE id = ?'
+        );
+        $stmt->execute([$username, $hashedPassword, $rol, $id]);
+        return $stmt->rowCount() > 0;
     }
 
-    public static function findUserByName($username)
+    public function updateUser(string $username, int $id, int $rol): bool
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT 
-                    usuarios.id, 
-                    usuarios.clave, 
-                    usuarios.rol
-                    FROM 
-                    usuarios 
-                    WHERE 
-                    usuarios.usuario = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$username]);
-
-            if ($stmt->rowCount() > 0) {
-                $user = $stmt->fetch(\PDO::FETCH_ASSOC);
-                //$accesos = self::findAccesosByRol($user['rol']);
-                return ["user" => $user];
-            }
-
-            return null;
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare(
+            'UPDATE usuarios SET usuario = ?, rol = ? WHERE id = ?'
+        );
+        $stmt->execute([$username, $rol, $id]);
+        return $stmt->rowCount() > 0;
     }
 
-    public static function findAccesosByRol($rol)
+    public function updateToken(int|string $userId, string $token): void
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT 
-                    secciones.nombre,
-                    secciones.tag
-                    FROM 
-                    accesos
-                    INNER JOIN
-                    secciones
-                    ON
-                    accesos.seccion = secciones.id
-                    WHERE
-                    accesos.rol= ? ";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$rol]);
-
-            if ($stmt->rowCount() > 0) {
-                return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            }
-
-            return null;
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare('UPDATE usuarios SET token = ? WHERE id = ?');
+        $stmt->execute([$token, $userId]);
     }
 
-    public static function findUserById($userId)
+    public function clearToken(string $token): bool
     {
-        try {
-            $connection = Database::getConnection();
-            $SQL = "SELECT 
-                    usuarios.id, 
-                    usuarios.usuario, 
-                    usuarios.rol,
-                    roles.nombre
-                    FROM 
-                        usuarios 
-                    LEFT JOIN
-                        roles
-                    ON
-                        usuarios.rol=roles.id
-                    WHERE 
-                    usuarios.id = ?";
-            $stmt = $connection->prepare($SQL);
-            $stmt->execute([$userId]);
+        $stmt = $this->pdo->prepare('UPDATE usuarios SET token = NULL WHERE token = ?');
+        $stmt->execute([$token]);
+        return $stmt->rowCount() > 0;
+    }
 
-            if ($stmt->rowCount() > 0) {
-                return $stmt->fetch(\PDO::FETCH_ASSOC);
-            }
+    public function findUserByToken(string $token): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT u.id, u.usuario, u.rol, r.nombre AS nombre_rol
+             FROM usuarios u
+             LEFT JOIN roles r ON u.rol = r.id
+             WHERE u.token = ?'
+        );
+        $stmt->execute([$token]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
 
-            return null;
-        } catch (PDOException $e) {
-            LogHelper::error($e);
-            throw new PDOException('Error: ' . $e->getMessage());
-        }
+    public function findUserByName(string $username): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id, clave, rol, tenant_id FROM usuarios WHERE usuario = ?'
+        );
+        $stmt->execute([$username]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function findUserById(int|string $userId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT u.id, u.usuario, u.rol, r.nombre
+             FROM usuarios u
+             LEFT JOIN roles r ON u.rol = r.id
+             WHERE u.id = ?'
+        );
+        $stmt->execute([$userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function findUserPermissions(string $token, string $key): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT rp.estado AS permiso
+             FROM usuarios u
+             LEFT JOIN roles_permisos rp ON rp.rol = u.rol
+             LEFT JOIN permisos p ON rp.permiso = p.id
+             WHERE u.token = ? AND p.key = ?'
+        );
+        $stmt->execute([$token, $key]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? ['permiso' => $result['permiso']] : ['permiso' => 0];
     }
 }

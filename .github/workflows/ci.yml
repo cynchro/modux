@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Code Style (phpcs PSR-12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: phpcs
+      - name: Install dependencies
+        working-directory: backend/src
+        run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Run phpcs
+        working-directory: backend/src
+        run: vendor/bin/phpcs --standard=PSR12 --ignore=vendor app/
+
+  analyse:
+    name: Static Analysis (phpstan level 6)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Install dependencies
+        working-directory: backend/src
+        run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Run phpstan
+        working-directory: backend/src
+        run: vendor/bin/phpstan analyse app/ --level=6 --no-progress
+
+  test:
+    name: Tests (PHPUnit)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: monolito_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo, pdo_mysql, mbstring
+          coverage: xdebug
+      - name: Install dependencies
+        working-directory: backend/src
+        run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Run PHPUnit
+        working-directory: backend/src
+        run: vendor/bin/phpunit --coverage-text
+        env:
+          APP_ENV: testing
+          JWT_SECRET: ci-test-secret-key-minimum-32-characters
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: monolito_test
+          DB_USER: root
+          DB_PASS: root
+          LOG_CHANNEL: stderr
+
+  docker-build:
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build ./backend -t monolito-modular:ci

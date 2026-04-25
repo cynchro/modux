@@ -48,7 +48,8 @@ $decoded = JWT::decode($jwt, new Key($key, 'HS256'));
 print_r($decoded);
 
 // Pass a stdClass in as the third parameter to get the decoded header values
-$decoded = JWT::decode($jwt, new Key($key, 'HS256'), $headers = new stdClass());
+$headers = new stdClass();
+$decoded = JWT::decode($jwt, new Key($key, 'HS256'), $headers);
 print_r($headers);
 
 /*
@@ -63,7 +64,7 @@ $decoded_array = (array) $decoded;
  * the signing and verifying servers. It is recommended that this leeway should
  * not be bigger than a few minutes.
  *
- * Source: http://self-issued.info/docs/draft-ietf-oauth-json-web-token.php#nbfDef
+ * Source: http://self-issued.info/docs/draft-ietf-oauth-json-web-token.html#nbfDef
  */
 JWT::$leeway = 60; // $leeway in seconds
 $decoded = JWT::decode($jwt, new Key($key, 'HS256'));
@@ -290,7 +291,7 @@ $jwks = ['keys' => []];
 
 // JWK::parseKeySet($jwks) returns an associative array of **kid** to Firebase\JWT\Key
 // objects. Pass this as the second parameter to JWT::decode.
-JWT::decode($payload, JWK::parseKeySet($jwks));
+JWT::decode($jwt, JWK::parseKeySet($jwks));
 ```
 
 Using Cached Key Sets
@@ -349,7 +350,7 @@ use InvalidArgumentException;
 use UnexpectedValueException;
 
 try {
-    $decoded = JWT::decode($payload, $keys);
+    $decoded = JWT::decode($jwt, $keys);
 } catch (InvalidArgumentException $e) {
     // provided key/key-array is empty or malformed.
 } catch (DomainException $e) {
@@ -379,7 +380,7 @@ like this:
 use Firebase\JWT\JWT;
 use UnexpectedValueException;
 try {
-    $decoded = JWT::decode($payload, $keys);
+    $decoded = JWT::decode($jwt, $keys);
 } catch (LogicException $e) {
     // errors having to do with environmental setup or malformed JWT Keys
 } catch (UnexpectedValueException $e) {
@@ -394,7 +395,7 @@ instead, you can do the following:
 
 ```php
 // return type is stdClass
-$decoded = JWT::decode($payload, $keys);
+$decoded = JWT::decode($jwt, $keys);
 
 // cast to array
 $decoded = json_decode(json_encode($decoded), true);

@@ -2,77 +2,42 @@
 
 namespace App\Modules\Usuario\Services;
 
-use PDOException;
+use App\Exceptions\NotFoundException;
 use App\Modules\Usuario\Repositories\UsuariosRepository;
 
 class UsuariosService
 {
-    public function create($request): array
+    public function __construct(private UsuariosRepository $repository)
     {
-        try {
-            $item = UsuariosRepository::create($request);
-            return ["datos" => $item];
-        } catch (PDOException $e) {
-            throw new \Exception('Error al crear un usuarios. Inténtalo más tarde.');
-        }
     }
 
     public function getAll(): array
     {
-        $items = UsuariosRepository::find();
-
-        if (!$items) {
-            throw new \Exception('No se encuentran usuarios.');
-        }
-        return $items;
+        return $this->repository->find();
     }
 
-    public function get($request): array
+    public function get(int $id): array
     {
-        $item = UsuariosRepository::findById($request->getId());
-
-        if (!$item) {
-            throw new \Exception('No se encuentra usuarios.');
-        }
-        return $item;
+        return $this->repository->findById($id);
     }
 
-    public function update($request): array
+    public function create(array $data): bool
     {
-        try {
-            $item = UsuariosRepository::update($request);
-            if (!$item) {
-                throw new \Exception('Usuarios inexistente.');
-            }
-            return $item;
-        } catch (PDOException $e) {
-            throw new \Exception('Error al modificar unn usuarios. Inténtalo más tarde.');
-        }
+        return $this->repository->create($data);
     }
 
-    public function updateSucursal($request): array
+    public function update(array $data): bool
     {
-        try {
-            $item = UsuariosRepository::updateSucursal($request);
-            if (!$item) {
-                throw new \Exception('Usuarios inexistente.');
-            }
-            return $item;
-        } catch (PDOException $e) {
-            throw new \Exception('Error al modificar unn usuarios. Inténtalo más tarde.');
-        }
+        return $this->repository->update($data);
     }
 
-    public function delete($request): bool
+    public function updateSucursal(int $userId, int $sucursalId): bool
     {
-        try {
-            $item = UsuariosRepository::delete($request);
-            if (!$item) {
-                throw new \Exception('Usuarios inexistente.');
-            }
-            return $item;
-        } catch (PDOException $e) {
-            throw new \Exception('Error al eliminar unn usuarios. Inténtalo más tarde.');
-        }
+        return $this->repository->updateSucursal($userId, $sucursalId);
+    }
+
+    public function delete(int $id): bool
+    {
+        return $this->repository->delete($id);
     }
 }

@@ -2,68 +2,37 @@
 
 namespace App\Modules\Admin\Services;
 
-use PDOException;
+use App\Exceptions\NotFoundException;
 use App\Modules\Admin\Repositories\RolRepository;
 
 class RolService
 {
-
-
-    public function create($request): array
+    public function __construct(private RolRepository $repository)
     {
-        try {
-            $Rol = RolRepository::create($request);
-            return ["datos" => $Rol];
-        } catch (PDOException $e) {
-            throw new \Exception('Error al crear un rol. Inténtalo más tarde.');
-        }
     }
 
     public function getAll(): array
     {
-
-        $Rol = RolRepository::find();
-
-        if (!$Rol) {
-            return [];
-        }
-        return $Rol;
+        return $this->repository->find();
     }
 
-    public function get($id): array
+    public function get(int $id): array
     {
-
-        $Rol = RolRepository::findById($id);
-
-        if (!$Rol) {
-            return [0];
-        }
-        return $Rol;
+        return $this->repository->findById($id);
     }
 
-    public function update($request): array
+    public function create(string $nombre): int
     {
-        try {
-            $Rol = RolRepository::update($request);
-            if (!$Rol) {
-                throw new \Exception('rol inexistente');
-            }
-            return $Rol;
-        } catch (PDOException $e) {
-            throw new \Exception('Error al modificar una rol. Inténtalo más tarde.');
-        }
+        return $this->repository->create($nombre);
     }
 
-    public function delete($request): bool
+    public function update(int $id, string $nombre, int $estado): bool
     {
-        try {
-            $Rol = RolRepository::delete($request);
-            if (!$Rol) {
-                throw new \Exception('rol inexistente');
-            }
-            return $Rol;
-        } catch (PDOException $e) {
-            throw new \Exception('Error al eliminar una Rol. Inténtalo más tarde.');
-        }
+        return $this->repository->update($id, $nombre, $estado);
+    }
+
+    public function delete(int $id): bool
+    {
+        return $this->repository->delete($id);
     }
 }

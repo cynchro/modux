@@ -2,134 +2,55 @@
 
 namespace App\Modules\Admin\Services;
 
-use PDOException;
 use App\Modules\Admin\Repositories\PermisosRepository;
 
 class PermisosService
 {
+    public function __construct(private PermisosRepository $repository)
+    {
+    }
 
     public function getAll(): array
     {
-
-        $Permisos = PermisosRepository::find();
-
-        if (!$Permisos) {
-            return [];
-        }
-        return $Permisos;
+        return $this->repository->find();
     }
 
-    public function get($id): array
+    public function get(int $id): array
     {
-        $Permisos = PermisosRepository::findById($id);
-
-        if (!$Permisos) {
-            return [0];
-        }
-        return $Permisos;
+        return $this->repository->findById($id);
     }
 
-    public function getAvailable($id): array
+    public function getAvailable(int $rolId): array
     {
-
-        return PermisosRepository::findAvailable($id);
+        return $this->repository->findAvailable($rolId);
     }
 
-    public function getOnUse($id): array
+    public function getOnUse(int $rolId): array
     {
-        return PermisosRepository::findInUse($id);
+        return $this->repository->findInUse($rolId);
     }
 
-    public function asignaciones($request)
-    {   
-        $permisosDisponibles = $request->input('permisos_disponibles', []);
-        $permisosAsignados = $request->input('permisos_asignados', []);
-
-        if ($request->accion === 'asignar') {
-            $this->asignar($request, $permisosDisponibles);
-        }
-
-        if ($request->accion === 'desasignar') {
-            $this->desasignar($request, $permisosAsignados);
-        }
-
-        if ($request->accion === 'actualizarDatos') {
-
-            if ($request->rol == 0) {
-                $this->create($request);
-            } else {
-                $this->update($request);
-            }
+    public function asignar(int $rolId, array $permisos): void
+    {
+        foreach ($permisos as $permisoId) {
+            $this->repository->asignar($rolId, (int) $permisoId);
         }
     }
 
-    public function asignar($request, $permisosDisponibles)
+    public function desasignar(int $rolId, array $permisos): void
     {
-
-        foreach ($permisosDisponibles as $permiso) {
-            PermisosRepository::asignar($request->rol, $permiso);
+        foreach ($permisos as $permisoId) {
+            $this->repository->desasignar($rolId, (int) $permisoId);
         }
-        $route = str_replace(" ","", "/admin/roles/abm/".$request->rol);
-        header("Location: ".$route);
-        exit;
     }
 
-    public function desasignar($request, $permisosAsignados)
+    public function createPermiso(string $key, string $descripcion): int
     {
-
-        foreach ($permisosAsignados as $permiso) {
-            PermisosRepository::desasignar($request->rol, $permiso);
-        }
-        $route = str_replace(" ","", "/admin/roles/abm/".$request->rol);
-        header("Location: ".$route);
-        exit;
+        return $this->repository->createPermiso($key, $descripcion);
     }
 
-    public function update($request)
+    public function updatePermiso(int $id, string $key, string $descripcion, int $estado): bool
     {
-
-        PermisosRepository::update($request);
-
-        header("Location: /admin/roles");
-        exit;
-    }
-
-    public function create($request)
-    {
-        $rol = PermisosRepository::create($request);
-        $route = str_replace(" ","", "/admin/roles/abm/".$rol);
-        header("Location: ".$route);
-
-        exit;
-    }
-
-    public function updatePermiso($request)
-    {
-
-        PermisosRepository::updatePermiso($request);
-
-        header("Location: /admin/permisos");
-        exit;
-    }
-
-    public function createPermiso($request)
-    {
-        $id = PermisosRepository::createPermiso($request);
-        $route = str_replace(" ","", "/admin/permisos");
-        header("Location: ".$route);
-
-        exit;
-    }
-
-
-    public function acciones($request)
-    {   
-        if ($request->accion === 'actualizarDatos') {
-            if ($request->id == 0) {
-                $this->createPermiso($request);
-            } else {
-                $this->updatePermiso($request);
-            }
-        }
+        return $this->repository->updatePermiso($id, $key, $descripcion, $estado);
     }
 }
