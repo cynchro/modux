@@ -35,21 +35,34 @@ Request → Kernel → Global pipeline (CORS, SecurityHeaders, Logger)
 
 ---
 
+## Installation
+
+### Via Composer (recommended)
+
+```bash
+composer create-project cynchro/modux mi-proyecto
+cd mi-proyecto
+```
+
+### Via Git
+
+```bash
+git clone https://github.com/cynchro/modux.git mi-proyecto
+cd mi-proyecto
+composer install
+```
+
+---
+
 ## Quick start
 
 ```bash
-git clone https://github.com/your-org/modux.git
-cd modux/backend/src
-
-composer install
-
 cp .env.example .env
 # Edit .env — minimum required:
 #   JWT_SECRET=<run: php -r "echo bin2hex(random_bytes(32));"> 
 #   DB_HOST, DB_NAME, DB_USER, DB_PASS
 
-php modux migrate       # create base tables
-php modux migrate       # seed default admin user (run seeders/RolesUsersSeeder.php separately)
+php modux migrate
 
 php -S localhost:8080 -t public/
 ```
