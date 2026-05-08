@@ -30,9 +30,6 @@ $app->singleton(\PDO::class, function (): \PDO {
     return new \PDO($dsn, $cfg['username'], $cfg['password'], $cfg['options']);
 });
 
-// Backward compat: keep Database::getConnection() working for legacy repositories
-App\Config\Database::setConnection($app->get(\PDO::class));
-
 // ── Stage 7: Router & Kernel ──────────────────────────────────────────────────
 $app->singleton(App\Support\Router::class, fn ($c) =>
     new App\Support\Router($c));
@@ -52,9 +49,9 @@ $router->get('/health', [App\Http\Controllers\HealthController::class, 'check'])
 $router->group(
     [App\Http\Middleware\AuthMiddleware::class, App\Http\Middleware\AdminMiddleware::class],
     function ($router) {
-        $router->get('/admin/logs',       [App\Http\Controllers\LogsController::class, 'index']);
-        $router->get('/admin/logs/{id}',  [App\Http\Controllers\LogsController::class, 'show']);
-        $router->delete('/admin/logs',    [App\Http\Controllers\LogsController::class, 'deleteAll']);
+        $router->get('/admin/logs', [App\Http\Controllers\LogsController::class, 'index']);
+        $router->get('/admin/logs/{id}', [App\Http\Controllers\LogsController::class, 'show']);
+        $router->delete('/admin/logs', [App\Http\Controllers\LogsController::class, 'deleteAll']);
     }
 );
 

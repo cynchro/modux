@@ -1,11 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: "#^Method App\\\\Config\\\\Database\\:\\:getInstance\\(\\) should return static\\(App\\\\Config\\\\Database\\) but returns App\\\\Config\\\\Database\\.$#"
-			count: 1
-			path: app/Config/Database.php
-
-		-
 			message: "#^Method App\\\\Helpers\\\\PaginatorHelper\\:\\:getPaginatedResults\\(\\) return type has no value type specified in iterable type array\\.$#"
 			count: 1
 			path: app/Helpers/PaginatorHelper.php
