@@ -136,16 +136,6 @@ parameters:
 			path: app/Modules/Auth/Services/AuthService.php
 
 		-
-			message: "#^Method App\\\\Modules\\\\Auth\\\\Services\\\\AuthService\\:\\:update\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
-			count: 1
-			path: app/Modules/Auth/Services/AuthService.php
-
-		-
-			message: "#^Method App\\\\Modules\\\\Auth\\\\Services\\\\AuthService\\:\\:updateUser\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
-			count: 1
-			path: app/Modules/Auth/Services/AuthService.php
-
-		-
 			message: "#^Variable \\$router might not be defined\\.$#"
 			count: 7
 			path: app/Modules/Auth/routes.php
@@ -357,7 +347,7 @@ parameters:
 
 		-
 			message: "#^Unsafe usage of new static\\(\\)\\.$#"
-			count: 4
+			count: 3
 			path: app/Support/Response.php
 
 		-

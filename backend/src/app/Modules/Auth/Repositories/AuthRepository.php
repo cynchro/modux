@@ -30,24 +30,6 @@ class AuthRepository
         }
     }
 
-    public function update(string $username, string $hashedPassword, int $id, int $rol): bool
-    {
-        $stmt = $this->pdo->prepare(
-            'UPDATE usuarios SET usuario = ?, clave = ?, rol = ? WHERE id = ?'
-        );
-        $stmt->execute([$username, $hashedPassword, $rol, $id]);
-        return $stmt->rowCount() > 0;
-    }
-
-    public function updateUser(string $username, int $id, int $rol): bool
-    {
-        $stmt = $this->pdo->prepare(
-            'UPDATE usuarios SET usuario = ?, rol = ? WHERE id = ?'
-        );
-        $stmt->execute([$username, $rol, $id]);
-        return $stmt->rowCount() > 0;
-    }
-
     public function updateToken(int|string $userId, string $token): void
     {
         $stmt = $this->pdo->prepare('UPDATE usuarios SET token = ? WHERE id = ?');

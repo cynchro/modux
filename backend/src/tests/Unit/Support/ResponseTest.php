@@ -31,12 +31,6 @@ class ResponseTest extends UnitTestCase
         $this->assertSame(404, $response->getStatus());
     }
 
-    public function test_html_returns_200(): void
-    {
-        $response = Response::html('<h1>Hello</h1>');
-        $this->assertSame(200, $response->getStatus());
-    }
-
     public function test_redirect_returns_302_by_default(): void
     {
         $response = Response::redirect('/dashboard');
@@ -72,14 +66,4 @@ class ResponseTest extends UnitTestCase
         $this->assertSame('John', $decoded['data']['name']);
     }
 
-    public function test_send_outputs_html(): void
-    {
-        $response = Response::html('<p>Test</p>');
-
-        ob_start();
-        $response->send();
-        $output = ob_get_clean();
-
-        $this->assertSame('<p>Test</p>', $output);
-    }
 }

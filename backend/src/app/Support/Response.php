@@ -47,15 +47,6 @@ class Response
         ], $status);
     }
 
-    public static function html(string $content, int $status = 200): static
-    {
-        $clone                          = new static();
-        $clone->status                  = $status;
-        $clone->headers['Content-Type'] = 'text/html; charset=utf-8';
-        $clone->rawBody                 = $content;
-        return $clone;
-    }
-
     public static function redirect(string $url, int $status = 302): static
     {
         $clone                      = new static();

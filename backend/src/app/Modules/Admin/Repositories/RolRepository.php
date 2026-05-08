@@ -32,8 +32,7 @@ class RolRepository
         return $row;
     }
 
-    private const ESTADO_ACTIVO   = 1;
-    private const ESTADO_INACTIVO = 0;
+    private const ESTADO_ACTIVO = 1;
 
     public function create(string $nombre): int
     {
@@ -46,13 +45,6 @@ class RolRepository
     {
         $stmt = $this->pdo->prepare('UPDATE roles SET nombre = ?, estado = ? WHERE id = ?');
         $stmt->execute([$nombre, $estado, $id]);
-        return $stmt->rowCount() > 0;
-    }
-
-    public function delete(int $id): bool
-    {
-        $stmt = $this->pdo->prepare('UPDATE roles SET estado = ? WHERE id = ?');
-        $stmt->execute([self::ESTADO_INACTIVO, $id]);
         return $stmt->rowCount() > 0;
     }
 }

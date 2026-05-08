@@ -23,26 +23,6 @@ class AuthService
         return $this->repository->create($data['usuario'], $hashed, (int) ($data['rol'] ?? 0));
     }
 
-    public function update(array $data): bool
-    {
-        $hashed = password_hash($data['clave'], PASSWORD_BCRYPT, ['cost' => 12]);
-        return $this->repository->update(
-            $data['usuario'],
-            $hashed,
-            (int) $data['id'],
-            (int) ($data['rol'] ?? 0)
-        );
-    }
-
-    public function updateUser(array $data): bool
-    {
-        return $this->repository->updateUser(
-            $data['usuario'],
-            (int) $data['id'],
-            (int) ($data['rol'] ?? 0)
-        );
-    }
-
     /** @return array{access_token: string, refresh_token: string} */
     public function login(array $data): array
     {

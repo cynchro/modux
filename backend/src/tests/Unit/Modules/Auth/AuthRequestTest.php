@@ -15,8 +15,8 @@ class AuthRequestTest extends UnitTestCase
             'clave'   => 'secret123',
         ]);
 
-        $this->assertSame('user@example.com', $request->getUsuario());
-        $this->assertSame('secret123', $request->getClave());
+        $this->assertSame('user@example.com', $request->input('usuario'));
+        $this->assertSame('secret123', $request->input('clave'));
     }
 
     public function test_missing_usuario_throws_validation_exception(): void
@@ -58,12 +58,12 @@ class AuthRequestTest extends UnitTestCase
     public function test_default_rol_is_zero(): void
     {
         $request = new AuthRequest(['usuario' => 'x@x.com', 'clave' => 'password']);
-        $this->assertSame(0, $request->getRol());
+        $this->assertSame(0, (int) $request->input('rol', 0));
     }
 
     public function test_rol_is_returned(): void
     {
         $request = new AuthRequest(['usuario' => 'x@x.com', 'clave' => 'password', 'rol' => 1]);
-        $this->assertSame(1, $request->getRol());
+        $this->assertSame(1, (int) $request->input('rol'));
     }
 }

@@ -52,14 +52,6 @@ class PermisosRepository
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function asignar(int $rolId, int $permisoId): void
-    {
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO roles_permisos (rol, permiso, estado) VALUES (?, ?, ?)'
-        );
-        $stmt->execute([$rolId, $permisoId, self::ESTADO_ASIGNADO]);
-    }
-
     /** @param list<int> $permisoIds */
     public function asignarBatch(int $rolId, array $permisoIds): void
     {
@@ -80,14 +72,6 @@ class PermisosRepository
             $this->pdo->rollBack();
             throw $e;
         }
-    }
-
-    public function desasignar(int $rolId, int $permisoId): void
-    {
-        $stmt = $this->pdo->prepare(
-            'DELETE FROM roles_permisos WHERE rol = ? AND permiso = ?'
-        );
-        $stmt->execute([$rolId, $permisoId]);
     }
 
     /** @param list<int> $permisoIds */

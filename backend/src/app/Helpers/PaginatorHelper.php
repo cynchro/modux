@@ -7,7 +7,12 @@ class PaginatorHelper
     private int $page;
     private int $perPage;
 
-    /** @param list<mixed> $params Positional parameters bound to the query (? placeholders) */
+    /**
+     * @param list<mixed> $params Positional parameters bound to the query (? placeholders).
+     *
+     * IMPORTANT: $query must be a static, hardcoded SQL string. Never pass user-controlled
+     * input as part of $query — use $params for dynamic values.
+     */
     public function __construct(
         private \PDO $connection,
         private string $query,

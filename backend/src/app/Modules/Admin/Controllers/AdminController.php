@@ -4,6 +4,10 @@ namespace App\Modules\Admin\Controllers;
 
 use App\Support\Request;
 use App\Support\Response;
+use App\Modules\Admin\Requests\StoreRolRequest;
+use App\Modules\Admin\Requests\UpdateRolRequest;
+use App\Modules\Admin\Requests\StorePermisoRequest;
+use App\Modules\Admin\Requests\UpdatePermisoRequest;
 use App\Modules\Admin\Services\RolService;
 use App\Modules\Admin\Services\PermisosService;
 use App\Modules\Auth\Services\AuthService;
@@ -37,21 +41,18 @@ class AdminController
         ]);
     }
 
-    public function storeRole(Request $request): Response
+    public function storeRole(StoreRolRequest $validated): Response
     {
-        $nombre = (string) $request->input('nombre', '');
-        $id     = $this->rolService->create($nombre);
+        $id = $this->rolService->create($validated->input('nombre'));
 
         return Response::success(['id' => $id], 201);
     }
 
-    public function updateRole(Request $request): Response
+    public function updateRole(Request $request, UpdateRolRequest $validated): Response
     {
-        $id     = (int) $request->route('id');
-        $nombre = (string) $request->input('nombre', '');
-        $estado = (int) $request->input('estado', 1);
+        $id = (int) $request->route('id');
 
-        $this->rolService->update($id, $nombre, $estado);
+        $this->rolService->update($id, $validated->input('nombre'), (int) $validated->input('estado'));
 
         return Response::success(['updated' => true]);
     }
@@ -90,24 +91,26 @@ class AdminController
         return Response::success($this->permisosService->get($id));
     }
 
-    public function storePermiso(Request $request): Response
+    public function storePermiso(StorePermisoRequest $validated): Response
     {
-        $key         = (string) $request->input('key', '');
-        $descripcion = (string) $request->input('descripcion', '');
-
-        $this->permisosService->createPermiso($key, $descripcion);
+        $this->permisosService->createPermiso(
+            $validated->input('key'),
+            $validated->input('descripcion')
+        );
 
         return Response::success(['created' => true], 201);
     }
 
-    public function updatePermiso(Request $request): Response
+    public function updatePermiso(Request $request, UpdatePermisoRequest $validated): Response
     {
-        $id          = (int) $request->route('id');
-        $key         = (string) $request->input('key', '');
-        $descripcion = (string) $request->input('descripcion', '');
-        $estado      = (int) $request->input('estado', 0);
+        $id = (int) $request->route('id');
 
-        $this->permisosService->updatePermiso($id, $key, $descripcion, $estado);
+        $this->permisosService->updatePermiso(
+            $id,
+            $validated->input('key'),
+            $validated->input('descripcion'),
+            (int) $validated->input('estado')
+        );
 
         return Response::success(['updated' => true]);
     }

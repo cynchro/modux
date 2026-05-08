@@ -30,9 +30,4 @@ class RolService
     {
         return $this->repository->update($id, $nombre, $estado);
     }
-
-    public function delete(int $id): bool
-    {
-        return $this->repository->delete($id);
-    }
 }

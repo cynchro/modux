@@ -20,12 +20,6 @@ class AuthController
         return Response::success($result, 201);
     }
 
-    public function update(AuthRequest $request): Response
-    {
-        $this->service->update($request->all());
-        return Response::success(['message' => 'Usuario actualizado con éxito.']);
-    }
-
     public function login(AuthRequest $request): Response
     {
         $tokens = $this->service->login($request->all());
