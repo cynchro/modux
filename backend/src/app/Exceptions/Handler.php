@@ -89,7 +89,10 @@ class Handler
                 $logger->error('Fatal error', $error);
                 http_response_code(500);
                 header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => false, 'message' => 'An internal server error occurred.'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(
+                    ['success' => false, 'message' => 'An internal server error occurred.'],
+                    JSON_UNESCAPED_UNICODE
+                );
             }
         });
     }

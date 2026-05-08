@@ -5,6 +5,7 @@ namespace App\Support;
 class LogService
 {
     private string $logFile;
+    /** @var array<int, array<string, mixed>> */
     private array $logs      = [];
     private int $logsPerPage = 15;
     private int $totalLogs   = 0;
@@ -45,6 +46,7 @@ class LogService
         $this->totalPages = (int) ceil($this->totalLogs / $this->logsPerPage);
     }
 
+    /** @return array<string, mixed>|null */
     private function parseLine(string $line): ?array
     {
         $decoded = json_decode($line, true);
@@ -73,6 +75,7 @@ class LogService
         return null;
     }
 
+    /** @return array<int, array<string, mixed>> */
     public function getPaginatedLogs(int $page = 1): array
     {
         $this->ensureLoaded();
@@ -80,6 +83,7 @@ class LogService
         return array_slice($this->logs, $start, $this->logsPerPage);
     }
 
+    /** @return array<string, int> */
     public function getPaginationData(): array
     {
         $this->ensureLoaded();
@@ -89,6 +93,7 @@ class LogService
         ];
     }
 
+    /** @return array<string, mixed>|null */
     public function getLogDetail(int $index): ?array
     {
         $this->ensureLoaded();
@@ -115,6 +120,7 @@ class LogService
         return array_merge($log, $this->parseLegacyMessage($log['full_message']));
     }
 
+    /** @return array<string, mixed> */
     private function parseLegacyMessage(string $text): array
     {
         $out = [
