@@ -2,4 +2,3 @@
 /.env
 /storage/logs/*.log
 /.phpunit.result.cache
-/phpstan-baseline.neon

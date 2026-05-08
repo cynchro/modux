@@ -1,0 +1,421 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Method App\\\\Config\\\\Database\\:\\:getInstance\\(\\) should return static\\(App\\\\Config\\\\Database\\) but returns App\\\\Config\\\\Database\\.$#"
+			count: 1
+			path: app/Config/Database.php
+
+		-
+			message: "#^Method App\\\\Helpers\\\\PaginatorHelper\\:\\:getPaginatedResults\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Helpers/PaginatorHelper.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Repositories\\\\PermisosRepository\\:\\:find\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Repositories/PermisosRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Repositories\\\\PermisosRepository\\:\\:findAvailable\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Repositories/PermisosRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Repositories\\\\PermisosRepository\\:\\:findById\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Repositories/PermisosRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Repositories\\\\PermisosRepository\\:\\:findInUse\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Repositories/PermisosRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Repositories\\\\RolRepository\\:\\:find\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Repositories/RolRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Repositories\\\\RolRepository\\:\\:findById\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Repositories/RolRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Services\\\\PermisosService\\:\\:asignar\\(\\) has parameter \\$permisos with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Services/PermisosService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Services\\\\PermisosService\\:\\:desasignar\\(\\) has parameter \\$permisos with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Services/PermisosService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Services\\\\PermisosService\\:\\:get\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Services/PermisosService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Services\\\\PermisosService\\:\\:getAll\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Services/PermisosService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Services\\\\PermisosService\\:\\:getAvailable\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Services/PermisosService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Services\\\\PermisosService\\:\\:getOnUse\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Services/PermisosService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Services\\\\RolService\\:\\:get\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Services/RolService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Admin\\\\Services\\\\RolService\\:\\:getAll\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Admin/Services/RolService.php
+
+		-
+			message: "#^Variable \\$router might not be defined\\.$#"
+			count: 2
+			path: app/Modules/Admin/routes.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Repositories\\\\AuthRepository\\:\\:create\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Repositories/AuthRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Repositories\\\\AuthRepository\\:\\:findUserById\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Repositories/AuthRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Repositories\\\\AuthRepository\\:\\:findUserByName\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Repositories/AuthRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Repositories\\\\AuthRepository\\:\\:findUserByToken\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Repositories/AuthRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Repositories\\\\AuthRepository\\:\\:findUserPermissions\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Repositories/AuthRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Requests\\\\AuthRequest\\:\\:rules\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Requests/AuthRequest.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Services\\\\AuthService\\:\\:login\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Services/AuthService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Services\\\\AuthService\\:\\:me\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Services/AuthService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Services\\\\AuthService\\:\\:permisos\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Services/AuthService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Services\\\\AuthService\\:\\:register\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Services/AuthService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Services\\\\AuthService\\:\\:register\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Services/AuthService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Services\\\\AuthService\\:\\:update\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Services/AuthService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Services\\\\AuthService\\:\\:updateUser\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Services/AuthService.php
+
+		-
+			message: "#^Variable \\$router might not be defined\\.$#"
+			count: 7
+			path: app/Modules/Auth/routes.php
+
+		-
+			message: "#^Variable \\$router might not be defined\\.$#"
+			count: 1
+			path: app/Modules/Cliente/routes.php
+
+		-
+			message: "#^Variable \\$router might not be defined\\.$#"
+			count: 1
+			path: app/Modules/Tenant/routes.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Auth\\\\Repositories\\\\AuthRepository\\:\\:findRefreshToken\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Auth/Repositories/AuthRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Usuario\\\\Repositories\\\\UsuariosRepository\\:\\:find\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Usuario/Repositories/UsuariosRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Usuario\\\\Repositories\\\\UsuariosRepository\\:\\:findById\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Usuario/Repositories/UsuariosRepository.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Usuario\\\\Services\\\\UsuariosService\\:\\:get\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Usuario/Services/UsuariosService.php
+
+		-
+			message: "#^Method App\\\\Modules\\\\Usuario\\\\Services\\\\UsuariosService\\:\\:getAll\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Modules/Usuario/Services/UsuariosService.php
+
+		-
+			message: "#^Variable \\$router might not be defined\\.$#"
+			count: 1
+			path: app/Modules/Usuario/routes.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Config\\:\\:all\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Config.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Config\\:\\:parseKey\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Config.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Config\\:\\:resolveKey\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Config.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Config\\:\\:\\$cache type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Config.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Container\\:\\:\\$bindings type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Container.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Container\\:\\:\\$instances type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Container.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Container\\:\\:\\$singletons type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Container.php
+
+		-
+			message: "#^Method App\\\\Support\\\\FormRequest\\:\\:__construct\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/FormRequest.php
+
+		-
+			message: "#^Method App\\\\Support\\\\FormRequest\\:\\:all\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/FormRequest.php
+
+		-
+			message: "#^Method App\\\\Support\\\\FormRequest\\:\\:rules\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/FormRequest.php
+
+		-
+			message: "#^Property App\\\\Support\\\\FormRequest\\:\\:\\$data type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/FormRequest.php
+
+		-
+			message: "#^Method App\\\\Support\\\\JWTConfig\\:\\:decodeToken\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/JWTConfig.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Logger\\:\\:__construct\\(\\) has parameter \\$config with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Logger.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Logger\\:\\:\\$channelConfig type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Logger.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Pipeline\\:\\:\\$stages type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Pipeline.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Request\\:\\:all\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Request\\:\\:file\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Request\\:\\:parseJson\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Request\\:\\:routeParams\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Request\\:\\:setRouteParams\\(\\) has parameter \\$params with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Request\\:\\:setUser\\(\\) has parameter \\$user with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Request\\:\\:user\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Request\\:\\:\\$files type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Request\\:\\:\\$get type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Request\\:\\:\\$jsonData type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Request\\:\\:\\$post type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Request\\:\\:\\$resolvedUser type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Request\\:\\:\\$routeParams type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Request\\:\\:\\$server type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Request.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Response\\:\\:json\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Response.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Response\\:\\:success\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Response.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Response\\:\\:\\$body type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Response.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Response\\:\\:\\$headers type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Response.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 4
+			path: app/Support/Response.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Router\\:\\:delete\\(\\) has parameter \\$action with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Router.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Router\\:\\:delete\\(\\) has parameter \\$protected with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Router.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Router\\:\\:get\\(\\) has parameter \\$action with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Router.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Router\\:\\:get\\(\\) has parameter \\$protected with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Router.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Router\\:\\:patch\\(\\) has parameter \\$action with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Router.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Router\\:\\:patch\\(\\) has parameter \\$protected with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Router.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Router\\:\\:post\\(\\) has parameter \\$action with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Router.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Router\\:\\:post\\(\\) has parameter \\$protected with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Router.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Router\\:\\:put\\(\\) has parameter \\$action with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Router.php
+
+		-
+			message: "#^Method App\\\\Support\\\\Router\\:\\:put\\(\\) has parameter \\$protected with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Router.php
+
+		-
+			message: "#^Property App\\\\Support\\\\Router\\:\\:\\$routes type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: app/Support/Router.php
