@@ -7,6 +7,9 @@ use PDOException;
 
 class PermisosRepository
 {
+    private const ESTADO_INACTIVO = 0;
+    private const ESTADO_ASIGNADO = 2;
+
     public function __construct(private PDO $pdo)
     {
     }
@@ -54,7 +57,7 @@ class PermisosRepository
         $stmt = $this->pdo->prepare(
             'INSERT INTO roles_permisos (rol, permiso, estado) VALUES (?, ?, ?)'
         );
-        $stmt->execute([$rolId, $permisoId, 2]);
+        $stmt->execute([$rolId, $permisoId, self::ESTADO_ASIGNADO]);
     }
 
     /** @param list<int> $permisoIds */
@@ -70,7 +73,7 @@ class PermisosRepository
                 'INSERT INTO roles_permisos (rol, permiso, estado) VALUES (?, ?, ?)'
             );
             foreach ($permisoIds as $permisoId) {
-                $stmt->execute([$rolId, $permisoId, 2]);
+                $stmt->execute([$rolId, $permisoId, self::ESTADO_ASIGNADO]);
             }
             $this->pdo->commit();
         } catch (\PDOException $e) {
@@ -114,7 +117,7 @@ class PermisosRepository
         $stmt = $this->pdo->prepare(
             'INSERT INTO permisos (`key`, descripcion, estado) VALUES (?, ?, ?)'
         );
-        $stmt->execute([$key, $descripcion, 0]);
+        $stmt->execute([$key, $descripcion, self::ESTADO_INACTIVO]);
         return (int) $this->pdo->lastInsertId();
     }
 

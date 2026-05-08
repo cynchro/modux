@@ -15,26 +15,28 @@ class CorsMiddleware implements MiddlewareInterface
         $credentials = Config::get('cors.allow_credentials', false);
         $origin      = $request->header('Origin') ?? '';
 
+        $response = $request->method() === 'OPTIONS'
+            ? (new Response())->withStatus(204)
+            : $next($request);
+
         // Wildcard + credentials is forbidden by the CORS spec; browsers reject it.
         // When credentials are required, always reflect the specific allowed origin.
         if (in_array('*', $origins, true) && !$credentials) {
-            header('Access-Control-Allow-Origin: *');
+            $response = $response->withHeader('Access-Control-Allow-Origin', '*');
         } elseif ($origin !== '' && in_array($origin, $origins, true)) {
-            header("Access-Control-Allow-Origin: {$origin}");
-            header('Vary: Origin');
+            $response = $response
+                ->withHeader('Access-Control-Allow-Origin', $origin)
+                ->withHeader('Vary', 'Origin');
         }
 
-        header('Access-Control-Allow-Methods: ' . implode(', ', Config::get('cors.allowed_methods', [])));
-        header('Access-Control-Allow-Headers: ' . implode(', ', Config::get('cors.allowed_headers', [])));
+        $response = $response
+            ->withHeader('Access-Control-Allow-Methods', implode(', ', Config::get('cors.allowed_methods', [])))
+            ->withHeader('Access-Control-Allow-Headers', implode(', ', Config::get('cors.allowed_headers', [])));
 
         if ($credentials) {
-            header('Access-Control-Allow-Credentials: true');
+            $response = $response->withHeader('Access-Control-Allow-Credentials', 'true');
         }
 
-        if ($request->method() === 'OPTIONS') {
-            return (new Response())->withStatus(204);
-        }
-
-        return $next($request);
+        return $response;
     }
 }

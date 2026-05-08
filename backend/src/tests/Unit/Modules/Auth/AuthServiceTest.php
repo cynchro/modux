@@ -5,6 +5,7 @@ namespace Tests\Unit\Modules\Auth;
 use App\Modules\Auth\Services\AuthService;
 use App\Modules\Auth\Repositories\AuthRepository;
 use App\Exceptions\AuthException;
+use App\Support\RateLimiter;
 use Tests\Unit\UnitTestCase;
 
 class AuthServiceTest extends UnitTestCase
@@ -15,7 +16,7 @@ class AuthServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         $this->repository = $this->createMock(AuthRepository::class);
-        $this->service    = new AuthService($this->repository);
+        $this->service    = new AuthService($this->repository, new RateLimiter());
     }
 
     public function test_login_throws_auth_exception_when_user_not_found(): void

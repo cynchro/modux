@@ -5,6 +5,7 @@ namespace Tests\Unit\Modules\Auth;
 use App\Modules\Auth\Services\AuthService;
 use App\Modules\Auth\Repositories\AuthRepository;
 use App\Exceptions\AuthException;
+use App\Support\RateLimiter;
 use Tests\Unit\UnitTestCase;
 
 class ImpersonateTest extends UnitTestCase
@@ -16,7 +17,7 @@ class ImpersonateTest extends UnitTestCase
     {
         parent::setUp();
         $this->repository = $this->createMock(AuthRepository::class);
-        $this->service    = new AuthService($this->repository);
+        $this->service    = new AuthService($this->repository, new RateLimiter());
     }
 
     public function test_impersonate_throws_when_admin_not_found(): void

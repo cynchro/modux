@@ -4,6 +4,7 @@ namespace App\Modules\Tenant\Repositories;
 
 use PDO;
 use App\Exceptions\NotFoundException;
+use App\Support\UUIDGenerator;
 
 class TenantRepository
 {
@@ -34,7 +35,7 @@ class TenantRepository
 
     public function create(string $nombre): string
     {
-        $id   = $this->uuid4();
+        $id   = UUIDGenerator::v4();
         $stmt = $this->pdo->prepare('INSERT INTO tenants (id, nombre) VALUES (?, ?)');
         $stmt->execute([$id, $nombre]);
         return $id;
@@ -52,13 +53,5 @@ class TenantRepository
         $stmt = $this->pdo->prepare('DELETE FROM tenants WHERE id = ?');
         $stmt->execute([$id]);
         return $stmt->rowCount() > 0;
-    }
-
-    private function uuid4(): string
-    {
-        $data    = random_bytes(16);
-        $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
-        $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
-        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
 }

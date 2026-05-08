@@ -64,7 +64,7 @@ class JWTConfig
         try {
             $decoded = JWT::decode($token, new Key(self::secretKey(), self::algorithm()));
             return (array) $decoded;
-        } catch (\Exception) {
+        } catch (\UnexpectedValueException | \InvalidArgumentException) {
             return null;
         }
     }

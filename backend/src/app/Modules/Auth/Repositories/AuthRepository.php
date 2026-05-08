@@ -5,6 +5,7 @@ namespace App\Modules\Auth\Repositories;
 use PDO;
 use PDOException;
 use App\Exceptions\DatabaseException;
+use App\Exceptions\ValidationException;
 
 class AuthRepository
 {
@@ -23,7 +24,7 @@ class AuthRepository
         } catch (\PDOException $e) {
             // SQLSTATE 23000: integrity constraint violation (duplicate unique key)
             if ($e->getCode() === '23000') {
-                throw new \Exception('El usuario ya existe en el sistema.');
+                throw new ValidationException(['usuario' => ['El usuario ya existe en el sistema.']]);
             }
             throw new DatabaseException('Error al crear el usuario.');
         }

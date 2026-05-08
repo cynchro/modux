@@ -2,9 +2,10 @@
 
 namespace App\Support;
 
-class LogService
+class LogReader
 {
     private string $logFile;
+
     /** @var array<int, array<string, mixed>> */
     private array $logs      = [];
     private int $logsPerPage = 15;

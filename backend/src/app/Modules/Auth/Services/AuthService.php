@@ -5,12 +5,16 @@ namespace App\Modules\Auth\Services;
 use App\Exceptions\AuthException;
 use App\Exceptions\RateLimitException;
 use App\Support\JWTConfig;
+use App\Support\RateLimiter;
+use App\Support\Roles;
 use App\Modules\Auth\Repositories\AuthRepository;
 
 class AuthService
 {
-    public function __construct(private AuthRepository $repository)
-    {
+    public function __construct(
+        private AuthRepository $repository,
+        private RateLimiter $rateLimiter
+    ) {
     }
 
     public function register(array $data): array
@@ -45,16 +49,18 @@ class AuthService
         $username = $data['usuario'];
         $cacheKey = 'login_attempt:' . $username;
 
-        $this->checkRateLimit($cacheKey);
+        if ($this->rateLimiter->tooManyAttempts($cacheKey)) {
+            throw new RateLimitException('Too many login attempts. Please try again in 5 minutes.');
+        }
 
         $user = $this->repository->findUserByName($username);
 
         if (!$user || !password_verify($data['clave'], $user['clave'])) {
-            $this->incrementRateLimit($cacheKey);
+            $this->rateLimiter->hit($cacheKey);
             throw new AuthException('Invalid credentials.', 401);
         }
 
-        $this->clearRateLimit($cacheKey);
+        $this->rateLimiter->clear($cacheKey);
 
         $userId       = (int) $user['id'];
         $accessToken  = JWTConfig::generateToken($userId, $user['tenant_id'] ?? null);
@@ -93,33 +99,6 @@ class AuthService
         return ['access_token' => $newAccessToken, 'refresh_token' => $newRefreshToken];
     }
 
-    private function checkRateLimit(string $key): void
-    {
-        if (!function_exists('apcu_fetch')) {
-            return;
-        }
-        $attempts = apcu_fetch($key);
-        if ($attempts !== false && $attempts >= 5) {
-            throw new RateLimitException('Too many login attempts. Please try again in 5 minutes.');
-        }
-    }
-
-    private function incrementRateLimit(string $key): void
-    {
-        if (!function_exists('apcu_fetch')) {
-            return;
-        }
-        $attempts = apcu_fetch($key);
-        apcu_store($key, ($attempts === false ? 0 : $attempts) + 1, 300);
-    }
-
-    private function clearRateLimit(string $key): void
-    {
-        if (function_exists('apcu_delete')) {
-            apcu_delete($key);
-        }
-    }
-
     public function logout(string $accessToken, ?string $refreshToken = null): void
     {
         $cleared = $this->repository->clearToken($accessToken);
@@ -153,7 +132,7 @@ class AuthService
     {
         $admin = $this->repository->findUserById($adminId);
 
-        if (!$admin || (int) ($admin['rol'] ?? 0) !== 1) {
+        if (!$admin || (int) ($admin['rol'] ?? 0) !== Roles::ADMIN) {
             throw new AuthException('No tienes permisos para suplantar usuarios.', 403);
         }
 

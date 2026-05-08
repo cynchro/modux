@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Support\Request;
 use App\Support\Response;
-use App\Support\LogService;
+use App\Support\LogReader;
 use App\Exceptions\NotFoundException;
 
 class LogsController
 {
-    public function __construct(private LogService $logService)
+    public function __construct(private LogReader $logService)
     {
     }
 

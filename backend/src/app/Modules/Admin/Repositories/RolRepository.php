@@ -23,19 +23,22 @@ class RolRepository
     {
         $stmt = $this->pdo->prepare('SELECT * FROM roles WHERE id = ?');
         $stmt->execute([$id]);
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (empty($result)) {
+        if (!$row) {
             throw new NotFoundException('Rol', $id);
         }
 
-        return $result;
+        return $row;
     }
+
+    private const ESTADO_ACTIVO   = 1;
+    private const ESTADO_INACTIVO = 0;
 
     public function create(string $nombre): int
     {
         $stmt = $this->pdo->prepare('INSERT INTO roles (nombre, estado) VALUES (?, ?)');
-        $stmt->execute([$nombre, 1]);
+        $stmt->execute([$nombre, self::ESTADO_ACTIVO]);
         return (int) $this->pdo->lastInsertId();
     }
 
@@ -48,8 +51,8 @@ class RolRepository
 
     public function delete(int $id): bool
     {
-        $stmt = $this->pdo->prepare('UPDATE roles SET estado = 0 WHERE id = ?');
-        $stmt->execute([$id]);
+        $stmt = $this->pdo->prepare('UPDATE roles SET estado = ? WHERE id = ?');
+        $stmt->execute([self::ESTADO_INACTIVO, $id]);
         return $stmt->rowCount() > 0;
     }
 }
