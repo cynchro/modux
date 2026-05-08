@@ -9,7 +9,6 @@ Production-ready PHP modular monolith. Each domain lives in `app/Modules/{Name}/
 ```
 backend/src/
 ├── app/
-│   ├── Config/             # PDO singleton bridge (legacy compat)
 │   ├── Exceptions/         # Exception hierarchy + global JSON handler
 │   ├── Helpers/            # PaginatorHelper, EmailHelper
 │   ├── Http/
@@ -26,7 +25,8 @@ backend/src/
 │   │       └── routes.php
 │   └── Support/            # Framework core + cross-cutting services
 │       ├── Config.php, Container.php (PSR-11), FormRequest.php
-│       ├── JWTConfig.php, Kernel.php, Logger.php (PSR-3), LogService.php, Pipeline.php
+│       ├── JWTConfig.php, Kernel.php, Logger.php (PSR-3), LogReader.php, Pipeline.php
+│       ├── RateLimiter.php, Roles.php, UUIDGenerator.php
 │       ├── Request.php, Response.php, Router.php
 │       ├── ServiceProvider.php, Validator.php
 │       └── Contracts/      # MiddlewareInterface, ServiceProviderInterface
@@ -131,7 +131,41 @@ throw new DatabaseException('Query failed');       // → 500
 
 ### Multi-tenancy
 
-Opt-in. Add `TenantMiddleware` to routes. Reads `tenant_id` from JWT payload, sets `$request->tenantId()`. Repositories accept `?string $tenantId` and scope `WHERE tenant_id = ?` when non-null. Without `TenantMiddleware`, tenantId is null and no scoping happens.
+Opt-in. Add `TenantMiddleware` to routes. `TenantMiddleware` requires PDO injection (auto-wired by the container) and verifies the tenant exists in the DB before proceeding. Reads `tenant_id` from JWT payload, sets `$request->tenantId()`. Repositories accept `?string $tenantId` and scope `WHERE tenant_id = ?` when non-null. Without `TenantMiddleware`, tenantId is null and no scoping happens.
+
+### Role constants
+
+Use `App\Support\Roles` instead of magic numbers:
+
+```php
+use App\Support\Roles;
+
+if ($user['rol'] === Roles::ADMIN) { ... }  // ADMIN = 1, USER = 0
+```
+
+### Rate limiting (APCu)
+
+`App\Support\RateLimiter` provides APCu-backed rate limiting. Gracefully no-ops when APCu is unavailable (e.g. in tests).
+
+```php
+if ($this->rateLimiter->tooManyAttempts($key)) {
+    throw new RateLimitException('Too many attempts.');
+}
+$this->rateLimiter->hit($key, ttlSeconds: 300);
+$this->rateLimiter->clear($key);
+```
+
+### UUID generation
+
+Use `App\Support\UUIDGenerator::v4()` anywhere a UUID v4 is needed. Do not inline the generation logic.
+
+### Log reading
+
+`App\Support\LogReader` reads and parses `storage/logs/app.log`. It is the **reader**. `App\Support\Logger` is the **writer**. Do not confuse the two.
+
+### PaginatorHelper
+
+`App\Helpers\PaginatorHelper` wraps a raw SQL query with `COUNT(*)` and `LIMIT/OFFSET`. The `$query` parameter **must be a static, hardcoded string**. Dynamic values must go through `$params` (PDO positional placeholders). Never pass user input as part of `$query`.
 
 ### Config access
 
@@ -150,10 +184,14 @@ $this->logger->error('Failed', ['exception' => $e->getMessage()]);
 
 JSON output to `storage/logs/app.log`. Falls back to STDERR if file is unwritable.
 
+### CORS
+
+Allowed origins are controlled by the `CORS_ALLOWED_ORIGINS` env var (comma-separated). The default is an empty list (deny all). **This must be set in production.** Wildcard `*` is supported but incompatible with `CORS_ALLOW_CREDENTIALS=true`.
+
 ## Testing
 
 ```bash
-composer test      # PHPUnit (119 tests)
+composer test      # PHPUnit (118 tests)
 composer lint      # phpcs PSR-12
 composer analyse   # phpstan level 6
 ```
@@ -165,6 +203,7 @@ Inject JSON body in feature tests: `Request::setTestInputStream(json_encode($dat
 ## Environment Variables
 
 Required at boot: `JWT_SECRET` (min 32 chars), `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`.  
+Optional but recommended in production: `CORS_ALLOWED_ORIGINS` (comma-separated list of allowed origins).  
 Never commit `.env`. Never hardcode secrets.
 
 ## Infrastructure routes
