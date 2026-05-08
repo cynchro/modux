@@ -16,9 +16,9 @@ class HealthController
         $db = $this->pingDatabase();
 
         return Response::success([
-            'status'  => $db ? 'ok' : 'degraded',
-            'php'     => PHP_VERSION,
-            'db'      => $db ? 'ok' : 'unreachable',
+            'status' => $db ? 'ok' : 'degraded',
+            'php'    => PHP_VERSION,
+            'db'     => $db ? 'ok' : 'unreachable',
         ], $db ? 200 : 503);
     }
 

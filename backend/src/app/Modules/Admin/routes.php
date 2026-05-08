@@ -1,12 +1,10 @@
 <?php
 
 use App\Modules\Admin\Controllers\AdminController;
-use App\Modules\Admin\Controllers\LogsController;
 use App\Http\Middleware\AuthMiddleware;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\TenantMiddleware;
 
-// Global admin routes — not tenant-scoped (roles, permisos, and logs are shared)
 $router->group([AuthMiddleware::class, AdminMiddleware::class], function ($router) {
     // Roles
     $router->get('/admin/roles', [AdminController::class, 'indexRoles']);
@@ -21,11 +19,6 @@ $router->group([AuthMiddleware::class, AdminMiddleware::class], function ($route
     $router->post('/admin/permisos', [AdminController::class, 'storePermiso']);
     $router->get('/admin/permisos/{id}', [AdminController::class, 'showPermiso']);
     $router->put('/admin/permisos/{id}', [AdminController::class, 'updatePermiso']);
-
-    // Logs
-    $router->get('/admin/logs', [LogsController::class, 'index']);
-    $router->get('/admin/logs/{id}', [LogsController::class, 'show']);
-    $router->delete('/admin/logs', [LogsController::class, 'deleteAll']);
 });
 
 // Tenant-scoped admin routes — users are isolated per tenant

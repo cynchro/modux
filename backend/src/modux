@@ -47,7 +47,6 @@ function makeModule(?string $name): void
         "{$base}/Services/{$name}Service.php"         => tpl_service($name),
         "{$base}/Requests/Create{$name}Request.php"   => tpl_request($name, 'Create'),
         "{$base}/Requests/Update{$name}Request.php"   => tpl_request($name, 'Update'),
-        "{$base}/{$name}ServiceProvider.php"          => tpl_provider($name),
         "{$base}/routes.php"                          => tpl_routes($name),
     ];
 
@@ -58,12 +57,9 @@ function makeModule(?string $name): void
 
     echo PHP_EOL;
     line('<yellow>Next steps:</yellow>');
-    line('  1. Register the provider in bootstrap/app.php:');
-    echo PHP_EOL;
-    echo "       App\\Modules\\{$name}\\{$name}ServiceProvider::class," . PHP_EOL;
-    echo PHP_EOL;
-    line('  2. Add your columns to the repository create() and update() methods.');
-    line('  3. Add validation rules to Create/Update requests.');
+    line('  1. Add your columns to the repository create() and update() methods.');
+    line('  2. Add validation rules to Create/Update requests.');
+    line('  3. Run: php modux make:migration create_' . strtolower($name) . 's_table');
     echo PHP_EOL;
 }
 
@@ -540,37 +536,6 @@ function tpl_request(string $name, string $prefix): string
     PHP;
 }
 
-function tpl_provider(string $name): string
-{
-    return <<<PHP
-    <?php
-
-    namespace App\Modules\\{$name};
-
-    use App\Support\ServiceProvider;
-    use App\Modules\\{$name}\Repositories\\{$name}Repository;
-    use App\Modules\\{$name}\Services\\{$name}Service;
-    use App\Modules\\{$name}\Controllers\\{$name}Controller;
-
-    class {$name}ServiceProvider extends ServiceProvider
-    {
-        public function register(): void
-        {
-            \$this->container->singleton({$name}Repository::class, fn (\$c) =>
-                new {$name}Repository(\$c->get(\PDO::class))
-            );
-
-            \$this->container->singleton({$name}Service::class, fn (\$c) =>
-                new {$name}Service(\$c->get({$name}Repository::class))
-            );
-
-            \$this->container->singleton({$name}Controller::class, fn (\$c) =>
-                new {$name}Controller(\$c->get({$name}Service::class))
-            );
-        }
-    }
-    PHP;
-}
 
 function tpl_routes(string $name): string
 {

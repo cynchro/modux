@@ -40,31 +40,22 @@ $app->singleton(App\Support\Router::class, fn ($c) =>
 $app->singleton(App\Support\Kernel::class, fn ($c) =>
     new App\Support\Kernel($c));
 
-// ── Stage 8: Module service providers ────────────────────────────────────────
-$providers = [
-    App\Modules\Auth\AuthServiceProvider::class,
-    App\Modules\Usuario\UsuarioServiceProvider::class,
-    App\Modules\Admin\AdminServiceProvider::class,
-    App\Modules\Cliente\ClienteServiceProvider::class,
-    App\Modules\Tenant\TenantServiceProvider::class,
-];
-
-$providerInstances = [];
-foreach ($providers as $providerClass) {
-    $instance = new $providerClass($app);
-    $instance->register();
-    $providerInstances[] = $instance;
+// ── Stage 8: Module routes (auto-discovered) ──────────────────────────────────
+$router = $app->get(App\Support\Router::class);
+foreach (glob(__DIR__ . '/../app/Modules/*/routes.php') as $routesFile) {
+    require $routesFile;
 }
 
-foreach ($providerInstances as $instance) {
-    $instance->boot();
-}
+// ── Stage 9: Infrastructure routes ───────────────────────────────────────────
+$router->get('/health', [App\Http\Controllers\HealthController::class, 'check']);
 
-// ── Stage 9: Infrastructure routes (not module concerns) ─────────────────────
-$app->singleton(App\Http\Controllers\HealthController::class, fn ($c) =>
-    new App\Http\Controllers\HealthController($c->get(\PDO::class)));
-
-$app->get(App\Support\Router::class)
-    ->get('/health', [App\Http\Controllers\HealthController::class, 'check']);
+$router->group(
+    [App\Http\Middleware\AuthMiddleware::class, App\Http\Middleware\AdminMiddleware::class],
+    function ($router) {
+        $router->get('/admin/logs',       [App\Http\Controllers\LogsController::class, 'index']);
+        $router->get('/admin/logs/{id}',  [App\Http\Controllers\LogsController::class, 'show']);
+        $router->delete('/admin/logs',    [App\Http\Controllers\LogsController::class, 'deleteAll']);
+    }
+);
 
 return $app;

@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Modules\Admin\Controllers;
+namespace App\Http\Controllers;
 
 use App\Support\Request;
 use App\Support\Response;
+use App\Support\LogService;
 use App\Exceptions\NotFoundException;
-use App\Modules\Admin\Services\LogService;
 
 class LogsController
 {

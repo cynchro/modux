@@ -13,26 +13,25 @@ backend/src/
 │   ├── Exceptions/         # Exception hierarchy + global JSON handler
 │   ├── Helpers/            # PaginatorHelper, EmailHelper
 │   ├── Http/
-│   │   ├── Controllers/    # Infrastructure controllers (HealthController)
+│   │   ├── Controllers/    # Infrastructure controllers (HealthController, LogsController)
 │   │   └── Middleware/     # CorsMiddleware, RequestSizeLimitMiddleware,
 │   │                       # SecurityHeadersMiddleware, RequestLoggerMiddleware,
 │   │                       # AuthMiddleware, AdminMiddleware, TenantMiddleware
-│   ├── Modules/            # Business domains
+│   ├── Modules/            # Business domains ONLY — see boundary rule below
 │   │   └── {Name}/
 │   │       ├── Controllers/
 │   │       ├── Repositories/
 │   │       ├── Requests/       # Extend FormRequest
 │   │       ├── Services/
-│   │       ├── {Name}ServiceProvider.php
 │   │       └── routes.php
-│   └── Support/            # Framework core
+│   └── Support/            # Framework core + cross-cutting services
 │       ├── Config.php, Container.php (PSR-11), FormRequest.php
-│       ├── JWTConfig.php, Kernel.php, Logger.php (PSR-3), Pipeline.php
+│       ├── JWTConfig.php, Kernel.php, Logger.php (PSR-3), LogService.php, Pipeline.php
 │       ├── Request.php, Response.php, Router.php
 │       ├── ServiceProvider.php, Validator.php
 │       └── Contracts/      # MiddlewareInterface, ServiceProviderInterface
 ├── bootstrap/
-│   ├── app.php             # 9-stage boot (env → container → logger → DB → providers → infra routes)
+│   ├── app.php             # 9-stage boot (env → container → logger → DB → modules → infra routes)
 │   └── test.php            # Test bootstrap (no HTTP dispatch)
 ├── config/                 # app.php, auth.php, cors.php, database.php, logging.php, mail.php
 ├── migrations/             # 0001_*.php, 0002_*.php (tracked in `migrations` table)
@@ -41,6 +40,20 @@ backend/src/
     ├── Feature/            # Full HTTP, real DB, transaction rollback
     └── Unit/               # Mocked repos, no DB
 ```
+
+## Boundary rule: Modules vs Infrastructure
+
+**`app/Modules/` is strictly for business domains** (Cliente, Factura, Producto, Usuario…).
+
+System infrastructure does NOT go in `app/Modules/`. It belongs in:
+
+| Concern | Location | Route registration |
+|---|---|---|
+| Business domain | `app/Modules/{Name}/` | Auto-discovered (glob) |
+| HTTP infrastructure | `app/Http/Controllers/` | Explicit in bootstrap Stage 9 |
+| Cross-cutting services | `app/Support/` | Auto-wired by container |
+
+Examples of infrastructure (never a module): health checks, log viewer, metrics, cache stats, queue status, feature flags.
 
 ## Request Lifecycle
 
@@ -57,13 +70,19 @@ index.php
 
 ## Key Conventions
 
-### Adding a module
+### Adding a business module
 
 ```bash
 php modux make:module <Name>
 ```
 
-Register in `bootstrap/app.php` under `$providers`. Each provider has `register()` (bindings) and `boot()` (loads routes). Two-pass: all `register()` runs before any `boot()`.
+Generates controller, service, repository, requests, and `routes.php`. The module is **auto-discovered** — `bootstrap/app.php` globs `app/Modules/*/routes.php` at boot. No registration needed. The container auto-wires all dependencies via reflection.
+
+### Adding an infrastructure route
+
+1. Create the controller in `app/Http/Controllers/`.
+2. Create the service (if needed) in `app/Support/`.
+3. Register the route explicitly in `bootstrap/app.php` Stage 9.
 
 ### Route definition
 
@@ -150,4 +169,9 @@ Never commit `.env`. Never hardcode secrets.
 
 ## Infrastructure routes
 
-- `GET /health` — returns `{status, php, db}`, HTTP 200 or 503
+Registered explicitly in `bootstrap/app.php` Stage 9. Never auto-discovered.
+
+- `GET /health` — `{status, php, db}`, HTTP 200 or 503
+- `GET /admin/logs` — paginated log viewer (requires Auth + Admin)
+- `GET /admin/logs/{id}` — log entry detail
+- `DELETE /admin/logs` — truncate log file
