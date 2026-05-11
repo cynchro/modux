@@ -1,0 +1,142 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+
+  quality:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test_db
+        ports:
+          - 3306:3306
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo, pdo_mysql, mbstring
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
+
+      - name: Wait for MySQL
+        run: |
+          until mysqladmin ping -h 127.0.0.1 --silent; do
+            sleep 1
+          done
+
+      - name: Install dependencies
+        working-directory: backend
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Validate composer.json
+        working-directory: backend
+        run: composer validate --strict
+
+      - name: Run PHPStan
+        working-directory: backend
+        run: vendor/bin/phpstan analyse app/ --level=6 --no-progress
+
+      - name: Run PHPUnit
+        working-directory: backend
+        run: vendor/bin/phpunit --coverage-text
+        env:
+          APP_ENV: testing
+          JWT_SECRET: ci-test-secret-key-minimum-32-characters
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: test_db
+          DB_USER: root
+          DB_PASS: root
+          LOG_CHANNEL: stderr
+
+
+  version:
+    name: Auto Versioning
+    needs: quality
+    runs-on: ubuntu-latest
+
+    outputs:
+      tag: ${{ steps.bump.outputs.new_tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          git fetch --tags
+          TAG=$(git tag | sort -V | tail -n 1)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Bump version
+        id: bump
+        run: |
+          TAG=${{ steps.get_tag.outputs.tag }}
+
+          if [ -z "$TAG" ]; then
+            NEW_TAG="v1.0.0"
+          else
+            VERSION=${TAG#v}
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+            PATCH=$((PATCH+1))
+            NEW_TAG="v$MAJOR.$MINOR.$PATCH"
+          fi
+
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git tag ${{ steps.bump.outputs.new_tag }}
+          git push origin ${{ steps.bump.outputs.new_tag }}
+
+
+  docker:
+    name: Docker Build & Push
+    needs: version
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USER }}" --password-stdin
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USER }}/monolito-modular:${{ needs.version.outputs.tag }} ./backend
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ secrets.DOCKER_USER }}/monolito-modular:${{ needs.version.outputs.tag }}
+
+
+  packagist:
+    name: Update Packagist
+    needs: version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Packagist update
+        run: |
+          curl -XPOST https://packagist.org/api/update-package \
+          -H "Content-Type: application/json" \
+          -d '{"repository":{"url":"https://github.com/TU-USER/TU-REPO"}}'
