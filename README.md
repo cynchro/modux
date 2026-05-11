@@ -16,16 +16,18 @@ Request → Kernel → Global pipeline (CORS, RequestSize, SecurityHeaders, Logg
 ```
 
 - **Zero magic** — no facades, no service locator calls in business code
-- **PSR-11 container** with reflection-based autowiring
+- **PSR-11 container** with reflection-based autowiring and `makeWith` for parameterized resolution
 - **PSR-3 structured logger** — JSON to file or stderr, falls back silently
 - **Middleware pipeline** — composable per-route and per-group, immutable via clone
 - **FormRequest** — validates on construction, throws `ValidationException` (422) automatically
 - **Exception hierarchy** — typed exceptions map directly to HTTP status codes
 - **JWT + refresh token rotation** — opaque refresh tokens, per-user revocation
-- **Rate limiting** — APCu-based per IP/username, graceful no-op if APCu not available
+- **Rate limiting** — `CacheInterface`-backed (APCu in production, Array in tests), graceful no-op
+- **RBAC** — `PermissionMiddleware` checks `roles_permisos` at runtime via parameterized middleware
+- **Event system** — synchronous `EventDispatcher` with `listen()` / `dispatch()`
 - **Multi-tenancy** — row-level isolation via `TenantMiddleware` + JWT `tenant_id` claim (optional)
-- **Versioned migrations** — tracked in a `migrations` table, safe to run on every deploy
-- **119 unit tests**, PHPStan level 6 clean, PHPCS PSR-12
+- **Versioned migrations** — tracked with batch numbers, supports `rollback` and `fresh`
+- **152 unit tests**, PHPStan level 6 clean, PHPCS PSR-12
 
 ---
 
@@ -100,35 +102,45 @@ curl http://localhost:8080/health
 ```
 backend/src/
 ├── app/
-│   ├── Config/             # PDO singleton bridge (backward compat)
 │   ├── Exceptions/         # Exception hierarchy + global JSON handler
 │   ├── Helpers/            # PaginatorHelper, EmailHelper
 │   ├── Http/
-│   │   ├── Controllers/    # Infrastructure controllers (HealthController)
+│   │   ├── Controllers/    # Infrastructure controllers (HealthController, LogsController)
 │   │   └── Middleware/     # CorsMiddleware, AuthMiddleware, AdminMiddleware,
-│   │                       # TenantMiddleware, SecurityHeadersMiddleware,
-│   │                       # RequestSizeLimitMiddleware, RequestLoggerMiddleware
+│   │                       # TenantMiddleware, PermissionMiddleware,
+│   │                       # SecurityHeadersMiddleware, RequestSizeLimitMiddleware,
+│   │                       # RequestLoggerMiddleware
 │   ├── Modules/            # Business domain modules
 │   │   └── {Name}/
 │   │       ├── Controllers/
 │   │       ├── Repositories/
-│   │       ├── Requests/       # Extend FormRequest
+│   │       ├── Requests/         # Extend FormRequest
 │   │       ├── Services/
-│   │       ├── {Name}ServiceProvider.php
+│   │       ├── ServiceProvider.php  # Optional — auto-discovered at boot
 │   │       └── routes.php
 │   └── Support/            # Framework core
+│       ├── Cache/              # ApcuCache, ArrayCache (implement CacheInterface)
 │       ├── Config.php          # Static config loader (config/*.php files)
-│       ├── Container.php       # PSR-11 DI container with autowiring
+│       ├── Container.php       # PSR-11 DI container with autowiring + makeWith
+│       ├── DB.php              # withTransaction() helper
+│       ├── EventDispatcher.php # Synchronous event bus
 │       ├── FormRequest.php     # Validated request base class
 │       ├── JWTConfig.php       # JWT encode/decode/refresh helpers
 │       ├── Kernel.php          # HTTP kernel — creates Request, dispatches
 │       ├── Logger.php          # PSR-3 structured JSON logger
+│       ├── LogReader.php       # Reads and parses app.log
 │       ├── Pipeline.php        # Immutable middleware pipeline
+│       ├── Job.php             # Base class for queueable jobs
+│       ├── JobDispatcher.php   # Dispatch, claim (atomic UUID), complete, fail, retry
+│       ├── RateLimiter.php     # CacheInterface-backed rate limiting
 │       ├── Request.php         # HTTP request wrapper
-│       ├── Response.php        # Immutable JSON response
-│       ├── Router.php          # Route registration + dispatch
+│       ├── Response.php        # Immutable JSON response (with getHeaders())
+│       ├── Roles.php           # Role constants (ADMIN, USER)
+│       ├── Router.php          # Route registration + dispatch + prefix groups
 │       ├── ServiceProvider.php # Base provider (register/boot lifecycle)
-│       └── Validator.php       # Validation engine
+│       ├── UUIDGenerator.php   # UUID v4 generation
+│       ├── Validator.php       # Validation engine
+│       └── Contracts/          # CacheInterface, MiddlewareInterface, ServiceProviderInterface
 ├── modux                   # CLI entry point
 ├── bootstrap/
 │   ├── app.php             # Boot sequence (9 stages)
@@ -153,38 +165,38 @@ backend/src/
 ## CLI — `php modux`
 
 ```
-php modux make:module <Name>      Scaffold a complete module (7 files)
-php modux make:migration <name>   Create a versioned migration file
-php modux migrate                 Run all pending migrations
-php modux routes                  List every registered route
+php modux make:module <Name> [--with-tenant]   Scaffold a complete module
+php modux make:migration <name>                Create a versioned migration file
+php modux make:test <Name>                     Generate a unit test stub
+php modux migrate                              Run all pending migrations
+php modux migrate:rollback                     Roll back the last migration batch
+php modux migrate:fresh                        Rollback all + re-run all migrations
+php modux routes                               List every registered route
+php modux queue:work [--queue=X] [--sleep=N] [--once] [--timeout=N]
+php modux queue:failed                         List failed jobs
+php modux queue:retry <id>                     Retry a failed job
+php modux queue:flush                          Delete all failed jobs
 ```
 
 ### `make:module`
 
 ```bash
 php modux make:module Producto
+php modux make:module Factura --with-tenant   # tenant-scoped repository + TenantMiddleware
 ```
 
 Generates `app/Modules/Producto/` with:
 
 ```
 Controllers/ProductoController.php
-Repositories/ProductoRepository.php
+Repositories/ProductoRepository.php   (or tenant-scoped variant)
 Services/ProductoService.php
 Requests/CreateProductoRequest.php
 Requests/UpdateProductoRequest.php
-ProductoServiceProvider.php
-routes.php
+routes.php                            (or with TenantMiddleware)
 ```
 
-Then register the provider in `bootstrap/app.php`:
-
-```php
-$providers = [
-    // ...existing providers...
-    App\Modules\Producto\ProductoServiceProvider::class,
-];
-```
+The module is **auto-discovered** — `bootstrap/app.php` globs `app/Modules/*/routes.php` at boot. No manual registration needed. Optionally add `app/Modules/{Name}/ServiceProvider.php` — it will also be auto-discovered.
 
 ### `make:migration`
 
@@ -208,7 +220,14 @@ php modux migrate
   1 migration(s) ran.
 ```
 
-Tracks ran migrations in a `migrations` table. Safe to run on every deploy.
+Tracks ran migrations in a `migrations` table with a `batch` number. Safe to run on every deploy.
+
+### `migrate:rollback` and `migrate:fresh`
+
+```bash
+php modux migrate:rollback   # undo last batch
+php modux migrate:fresh      # rollback all + re-run all (resets to clean state)
+```
 
 ### `routes`
 
@@ -242,12 +261,13 @@ Does not require a database connection.
 | 3 | Set error reporting, disable display_errors |
 | 4 | Build PSR-11 Container |
 | 5 | Register Logger singleton + global exception handler |
-| 6 | Register PDO singleton |
+| 6 | Register PDO, DB, and CacheInterface (ApcuCache) singletons |
 | 7 | Register Router + Kernel singletons |
-| 8 | Run all module ServiceProviders (two-pass: all `register()`, then all `boot()`) |
-| 9 | Register infrastructure routes (health check) |
+| 7.5 | Register EventDispatcher; auto-discover + boot module ServiceProviders |
+| 8 | Auto-discover module `routes.php` files |
+| 9 | Register infrastructure routes (health, logs) |
 
-The two-pass provider lifecycle means all bindings exist before any provider's `boot()` (which loads routes and resolves controllers) runs.
+Stage 7.5 calls `register()` then `boot()` on every `app/Modules/*/ServiceProvider.php` that exists. This is where modules subscribe to events and override container bindings.
 
 ---
 
@@ -395,22 +415,33 @@ $router->delete('/productos/{id}', [ProductoController::class, 'delete'],
     [AuthMiddleware::class, AdminMiddleware::class]);
 ```
 
-### Route groups — share middlewares
+### Route groups — share middlewares and URI prefix
 
 ```php
+// Middleware group
 $router->group([AuthMiddleware::class], function ($router) {
     $router->get('/productos',      [ProductoController::class, 'index']);
     $router->post('/productos',     [ProductoController::class, 'create']);
     $router->put('/productos/{id}', [ProductoController::class, 'update']);
 });
 
-// Nested groups — middlewares are merged, not replaced
+// Prefix group — all routes get /v1 prepended
+$router->group([AuthMiddleware::class], '/v1', function ($router) {
+    $router->get('/productos', [ProductoController::class, 'index']); // → GET /v1/productos
+});
+
+// Nested groups — middlewares and prefixes are merged, not replaced
 $router->group([AuthMiddleware::class], function ($router) {
     $router->group([AdminMiddleware::class], function ($router) {
         $router->get('/admin/roles', [AdminController::class, 'roles']);
-        $router->get('/admin/logs',  [AdminController::class, 'logs']);
     });
 });
+
+// Parameterized middleware — RBAC permission check
+$router->delete('/productos/{id}', [ProductoController::class, 'delete'], [
+    AuthMiddleware::class,
+    PermissionMiddleware::class . ':productos.delete',
+]);
 ```
 
 Route parameters are extracted automatically and available via `$request->route('id')`.
@@ -483,21 +514,21 @@ Response::success($data, 201);      // 201 Created
 // Error responses
 Response::error('Not allowed.', 403);
 
-// HTML response
-Response::html('<h1>Hello</h1>');
-
 // Redirect
 Response::redirect('/new-path', 302);
 
-// Builder pattern
+// Builder pattern (immutable — each method returns a new instance)
 (new Response())
     ->withStatus(200)
     ->withHeader('X-Custom', 'value')
     ->json(['key' => 'value']);
 
+// Inspect without sending
+$response->getStatus();            // int
+$response->getHeaders();           // array<string, string>
+
 // Send (called once by Kernel)
 $response->send();
-$response->getStatus();            // int
 ```
 
 Success response shape:
@@ -635,6 +666,7 @@ All exceptions extend `AppException`. Unhandled `Throwable` returns 500 with the
 | `AuthMiddleware` | Protected routes | Decodes JWT, validates token is not revoked, sets `$request->user()` |
 | `AdminMiddleware` | Admin routes | Requires `user['rol'] === 1`, throws 403 otherwise |
 | `TenantMiddleware` | Tenant-scoped routes | Reads `tenant_id` from JWT payload, sets `$request->tenantId()` |
+| `PermissionMiddleware` | RBAC routes | Checks `roles_permisos` table for the given permission key (403 if not granted) |
 
 The global pipeline (`CorsMiddleware → RequestSizeLimitMiddleware → SecurityHeadersMiddleware → RequestLoggerMiddleware`) runs on every request before any route middleware.
 
@@ -744,9 +776,12 @@ $service = $app->get(MyService::class);
 
 // Autowire without registration (uses reflection)
 $service = $app->make(MyService::class);
+
+// Autowire and inject extra scalar params into builtin constructor parameters
+$middleware = $app->makeWith(PermissionMiddleware::class, 'facturas.delete');
 ```
 
-Autowiring resolves constructor parameters by type name. If no binding exists for a type, it recursively resolves the class. Scalar parameters without defaults throw `ContainerException`.
+Autowiring resolves constructor parameters by type name. If no binding exists for a type, it recursively resolves the class. Scalar parameters without defaults throw `ContainerException`. `makeWith` injects additional scalars positionally into builtin-typed parameters — used internally by the Router for parameterized middlewares.
 
 ---
 
@@ -878,11 +913,10 @@ Query parameters accepted:
 | `perPage` | `10` | Items per page |
 | `paginate` | `true` | Set to `false` to return all results unpaged |
 
-Response shape:
+Response shape (always HTTP 200, even when `results` is empty):
 
 ```json
 {
-  "status": 200,
   "total": 42,
   "cantidad_por_pagina": 10,
   "pagina": 2,
@@ -928,7 +962,7 @@ return new class {
 ## Testing
 
 ```bash
-composer test      # PHPUnit (119 tests)
+composer test      # PHPUnit (152 tests)
 composer lint      # phpcs PSR-12
 composer analyse   # phpstan level 6
 ```
@@ -985,6 +1019,164 @@ class ProductoFeatureTest extends FeatureTestCase
 ```
 
 Each feature test wraps its DB operations in a transaction that rolls back in `tearDown()`.
+
+---
+
+## Events
+
+`EventDispatcher` provides a synchronous in-process event bus. Inject it anywhere via the container.
+
+```php
+// Subscribe in ServiceProvider::boot()
+$dispatcher->listen('usuario.created', function (array $payload): void {
+    // send welcome email, log audit trail, etc.
+    // $payload = ['id' => 42, 'email' => 'user@example.com']
+});
+
+// Dispatch from a Service
+$this->dispatcher->dispatch('usuario.created', [
+    'id'    => $id,
+    'email' => $data['email'],
+]);
+
+// Check if anyone is listening
+$dispatcher->hasListeners('usuario.created'); // bool
+```
+
+Events are synchronous — the caller waits for all listeners to finish. For fire-and-forget behaviour wrap the listener body in a `try/catch`.
+
+---
+
+## RBAC — permission-based access control
+
+Assign permission keys to roles via the `roles_permisos` table (each row links a `rol_id` to a `permiso_id`). Use `PermissionMiddleware` on routes that require a specific permission:
+
+```php
+use App\Http\Middleware\PermissionMiddleware;
+
+$router->group([AuthMiddleware::class, TenantMiddleware::class], function ($router) {
+    $router->get('/facturas',       [FacturaController::class, 'index']);
+    $router->post('/facturas',      [FacturaController::class, 'create'],   [PermissionMiddleware::class . ':facturas.write']);
+    $router->delete('/facturas/{id}', [FacturaController::class, 'delete'], [PermissionMiddleware::class . ':facturas.delete']);
+});
+```
+
+The middleware throws `ForbiddenException` (403) if the authenticated user's role does not have the requested permission. `AdminMiddleware` still covers simple admin-only gates; use `PermissionMiddleware` for fine-grained per-operation control.
+
+---
+
+## Database transactions
+
+`App\Support\DB` wraps operations in a PDO transaction with automatic rollback on any exception:
+
+```php
+class FacturaService
+{
+    public function __construct(
+        private FacturaRepository $facturas,
+        private LineaRepository   $lineas,
+        private DB                $db,
+    ) {}
+
+    public function create(array $data): array
+    {
+        return $this->db->withTransaction(function () use ($data) {
+            $factura = $this->facturas->create($data);
+            foreach ($data['lineas'] as $linea) {
+                $this->lineas->create($factura['id'], $linea);
+            }
+            return $factura;
+        });
+    }
+}
+```
+
+Inject `DB` in any service; the container auto-wires it with the registered PDO singleton.
+
+---
+
+## Job queue
+
+DB-backed async queue. Jobs are stored in a `jobs` table and processed by a worker process. Multiple workers can run in parallel — claiming is done with an atomic UUID `UPDATE`.
+
+### Defining a job
+
+```php
+namespace App\Modules\Notificaciones\Jobs;
+
+use App\Support\Container;
+use App\Support\Job;
+
+class SendWelcomeEmailJob extends Job
+{
+    public string $email = '';
+    public string $name  = '';
+    public string $queue = 'emails';   // override the default queue
+
+    public function handle(Container $container): void
+    {
+        $container->get(MailService::class)->sendWelcome($this->email, $this->name);
+    }
+}
+```
+
+Public properties (except the framework-reserved `queue`, `maxAttempts`, `delaySeconds`) are serialized as JSON payload in the DB. Service dependencies are resolved from the Container when `handle()` runs.
+
+### Dispatching
+
+```php
+// Inject JobDispatcher in any service constructor
+public function __construct(private JobDispatcher $dispatcher) {}
+
+$job        = new SendWelcomeEmailJob();
+$job->email = $data['email'];
+$job->name  = $data['nombre'];
+$this->dispatcher->dispatch($job);
+
+// Dispatch with a delay (seconds before the job becomes available)
+$job->delaySeconds = 300;
+$this->dispatcher->dispatch($job);
+```
+
+### Running the worker
+
+```bash
+php modux queue:work                           # process 'default' queue, sleep 3s between polls
+php modux queue:work --queue=emails            # process a specific queue
+php modux queue:work --queue=emails --sleep=5  # custom sleep interval
+php modux queue:work --once                    # process one job then exit (useful for cron)
+php modux queue:work --timeout=10              # release jobs stuck > 10 minutes
+```
+
+SIGINT / SIGTERM (Ctrl-C) triggers a graceful shutdown — the worker finishes the current job before stopping.
+
+For production, manage the worker with **supervisord** or **systemd** so it restarts automatically if it crashes.
+
+### Failed jobs
+     
+On failure the job is retried up to `maxAttempts` times (default 3) with exponential back-off: `2^attempts` seconds between retries. After the last attempt the job row is marked `status = 'failed'` with the full error message stored.
+
+```bash
+php modux queue:failed          # list all failed jobs
+php modux queue:retry 42        # reset job #42 to 'pending' so the worker picks it up again
+php modux queue:flush           # delete all failed jobs
+```
+
+### `jobs` table schema
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | INT AUTO_INCREMENT | Primary key |
+| `queue` | VARCHAR(100) | Queue name |
+| `payload` | MEDIUMTEXT | JSON-serialized class + data |
+| `attempts` | INT | How many times the worker tried |
+| `max_attempts` | INT | Copied from Job at dispatch time |
+| `status` | ENUM | `pending`, `running`, `failed` |
+| `available_at` | DATETIME | When the job becomes eligible (supports delay) |
+| `reserved_at` | DATETIME | When a worker claimed it |
+| `reserved_by` | CHAR(36) | UUID of the worker that claimed it (atomic lock) |
+| `failed_at` | DATETIME | When the job was finally marked failed |
+| `error` | TEXT | Exception message + trace |
 
 ---
 
@@ -1046,7 +1238,7 @@ Optional:
 | DI | Explicit constructor injection | Facades + service locator |
 | Magic | None | `Auth::user()`, `DB::table()`, `Cache::get()`, ... |
 | ORM | Raw PDO (you control every query) | Eloquent |
-| Queue / Events | Not included | Full system |
+| Queue / Events | DB-backed async queue + synchronous `EventDispatcher` | Full async queue + broadcasting |
 | Validation rules | 16 essential | 50+ |
 | Learning curve | Read the source, understand everything | Learn the framework conventions |
 | Suited for | Controlled APIs, internal tools, multi-tenant SaaS | Full-featured web apps |
