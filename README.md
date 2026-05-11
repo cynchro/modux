@@ -1153,7 +1153,7 @@ SIGINT / SIGTERM (Ctrl-C) triggers a graceful shutdown — the worker finishes t
 For production, manage the worker with **supervisord** or **systemd** so it restarts automatically if it crashes.
 
 ### Failed jobs
-     
+        
 On failure the job is retried up to `maxAttempts` times (default 3) with exponential back-off: `2^attempts` seconds between retries. After the last attempt the job row is marked `status = 'failed'` with the full error message stored.
 
 ```bash
