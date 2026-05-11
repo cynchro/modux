@@ -17,10 +17,10 @@ jobs:
           php-version: '8.2'
           tools: phpcs
       - name: Install dependencies
-        working-directory: backend/src
+        working-directory: backend
         run: composer install --prefer-dist --no-progress --no-interaction
       - name: Run phpcs
-        working-directory: backend/src
+        working-directory: backend
         run: vendor/bin/phpcs --standard=PSR12 --ignore=vendor app/
 
   analyse:
@@ -32,10 +32,10 @@ jobs:
         with:
           php-version: '8.2'
       - name: Install dependencies
-        working-directory: backend/src
+        working-directory: backend
         run: composer install --prefer-dist --no-progress --no-interaction
       - name: Run phpstan
-        working-directory: backend/src
+        working-directory: backend
         run: vendor/bin/phpstan analyse app/ --level=6 --no-progress
 
   test:
@@ -63,10 +63,10 @@ jobs:
           extensions: pdo, pdo_mysql, mbstring
           coverage: xdebug
       - name: Install dependencies
-        working-directory: backend/src
+        working-directory: backend
         run: composer install --prefer-dist --no-progress --no-interaction
       - name: Run PHPUnit
-        working-directory: backend/src
+        working-directory: backend
         run: vendor/bin/phpunit --coverage-text
         env:
           APP_ENV: testing
@@ -84,4 +84,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build Docker image
-        run: docker build ./backend -t monolito-modular:ci
+        run: docker build -f ./backend/docker/Dockerfile ./backend -t monolito-modular:ci
