@@ -15,15 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           tools: phpcs
+
       - name: Install dependencies
-        working-directory: framework/backend
         run: composer install --prefer-dist --no-progress --no-interaction
+
       - name: Run phpcs
-        working-directory: framework/backend
         run: vendor/bin/phpcs --standard=PSR12 --ignore=vendor app/
 
   analyse:
@@ -31,19 +32,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
+
       - name: Install dependencies
-        working-directory: framework/backend
         run: composer install --prefer-dist --no-progress --no-interaction
+
       - name: Run phpstan
-        working-directory: framework/backend
         run: vendor/bin/phpstan analyse app/ --level=6 --no-progress
 
   test:
     name: Tests (PHPUnit)
     runs-on: ubuntu-latest
+
     services:
       mysql:
         image: mysql:8.0
@@ -60,6 +63,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
@@ -73,11 +77,9 @@ jobs:
           done
 
       - name: Install dependencies
-        working-directory: framework/backend
         run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Run PHPUnit
-        working-directory: framework/backend
         run: vendor/bin/phpunit --coverage-text
         env:
           APP_ENV: testing
@@ -94,8 +96,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Build Docker image
-        run: docker build -f ./framework/backend/docker/Dockerfile ./framework/backend -t monolito-modular:ci
+        run: docker build -f ./docker/Dockerfile . -t monolito-modular:ci
 
   tag:
     name: Auto Tag
