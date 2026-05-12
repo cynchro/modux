@@ -4,18 +4,18 @@ return new class {
     public function up(\PDO $pdo): void
     {
         $pdo->exec("
-            ALTER TABLE clientes
-                ADD COLUMN tenant_id CHAR(36) NOT NULL,
-                ADD CONSTRAINT fk_clientes_tenant
+            CREATE TABLE IF NOT EXISTS clientes (
+                id        INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                tenant_id CHAR(36) NOT NULL,
+                CONSTRAINT fk_clientes_tenant
                     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-                ADD INDEX idx_clientes_tenant (tenant_id)
+                INDEX idx_clientes_tenant (tenant_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
     }
 
     public function down(\PDO $pdo): void
     {
-        $pdo->exec('ALTER TABLE clientes DROP FOREIGN KEY fk_clientes_tenant');
-        $pdo->exec('ALTER TABLE clientes DROP INDEX idx_clientes_tenant');
-        $pdo->exec('ALTER TABLE clientes DROP COLUMN tenant_id');
+        $pdo->exec('DROP TABLE IF EXISTS clientes');
     }
 };
