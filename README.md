@@ -45,7 +45,7 @@ Request → Kernel → Global pipeline (CORS, RequestSize, SecurityHeaders, Logg
 git clone <repo> my-project
 cd my-project
 composer install
-cp backend/src/.env.example backend/src/.env
+cp .env.example .env
 # Edit .env — see Environment Variables section
 ```
 
@@ -55,7 +55,7 @@ cp backend/src/.env.example backend/src/.env
 
 ```bash
 # 1. Configure environment
-cp backend/src/.env.example backend/src/.env
+cp .env.example .env
 # Set JWT_SECRET, DB_HOST, DB_NAME, DB_USER, DB_PASS
 
 # 2. Run migrations
@@ -100,7 +100,7 @@ curl http://localhost:8080/health
 ## Project structure
 
 ```
-backend/src/
+
 ├── app/
 │   ├── Exceptions/         # Exception hierarchy + global JSON handler
 │   ├── Helpers/            # PaginatorHelper, EmailHelper
