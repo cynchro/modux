@@ -130,8 +130,6 @@ curl http://localhost:8080/health
 │       ├── Logger.php          # PSR-3 structured JSON logger
 │       ├── LogReader.php       # Reads and parses app.log
 │       ├── Pipeline.php        # Immutable middleware pipeline
-│       ├── Job.php             # Base class for queueable jobs
-│       ├── JobDispatcher.php   # Dispatch, claim (atomic UUID), complete, fail, retry
 │       ├── RateLimiter.php     # CacheInterface-backed rate limiting
 │       ├── Request.php         # HTTP request wrapper
 │       ├── Response.php        # Immutable JSON response (with getHeaders())
@@ -172,10 +170,6 @@ php modux migrate                              Run all pending migrations
 php modux migrate:rollback                     Roll back the last migration batch
 php modux migrate:fresh                        Rollback all + re-run all migrations
 php modux routes                               List every registered route
-php modux queue:work [--queue=X] [--sleep=N] [--once] [--timeout=N]
-php modux queue:failed                         List failed jobs
-php modux queue:retry <id>                     Retry a failed job
-php modux queue:flush                          Delete all failed jobs
 ```
 
 ### `make:module`
@@ -1095,6 +1089,7 @@ Inject `DB` in any service; the container auto-wires it with the registered PDO 
 
 ---
 
+<<<<<<< HEAD
 ## Job queue
 
 DB-backed async queue. Jobs are stored in a `jobs` table and processed by a worker process. Multiple workers can run in parallel — claiming is done with an atomic UUID `UPDATE`.
@@ -1180,6 +1175,8 @@ php modux queue:flush           # delete all failed jobs
 
 ---
 
+=======
+>>>>>>> a5a8fce (tenant clients)
 ## Health check
 
 ```
@@ -1238,7 +1235,11 @@ Optional:
 | DI | Explicit constructor injection | Facades + service locator |
 | Magic | None | `Auth::user()`, `DB::table()`, `Cache::get()`, ... |
 | ORM | Raw PDO (you control every query) | Eloquent |
+<<<<<<< HEAD
 | Queue / Events | DB-backed async queue + synchronous `EventDispatcher` | Full async queue + broadcasting |
+=======
+| Queue / Events | Synchronous `EventDispatcher` | Full async queue + broadcasting |
+>>>>>>> a5a8fce (tenant clients)
 | Validation rules | 16 essential | 50+ |
 | Learning curve | Read the source, understand everything | Learn the framework conventions |
 | Suited for | Controlled APIs, internal tools, multi-tenant SaaS | Full-featured web apps |
