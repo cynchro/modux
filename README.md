@@ -1089,7 +1089,6 @@ Inject `DB` in any service; the container auto-wires it with the registered PDO 
 
 ---
 
-<<<<<<< HEAD
 ## Job queue
 
 DB-backed async queue. Jobs are stored in a `jobs` table and processed by a worker process. Multiple workers can run in parallel — claiming is done with an atomic UUID `UPDATE`.
@@ -1175,8 +1174,6 @@ php modux queue:flush           # delete all failed jobs
 
 ---
 
-=======
->>>>>>> a5a8fce (tenant clients)
 ## Health check
 
 ```
@@ -1226,6 +1223,34 @@ Optional:
 
 ---
 
+## Optional: AI module (LLM + RAG)
+
+Modux ships **without** any AI by default. AI is an opt-in add-on built on the standalone
+[`cynchro/modux-ia`](https://packagist.org/packages/cynchro/modux-ia) SDK (LLM + RAG, no Python/Node).
+
+```bash
+composer require cynchro/modux-ia
+```
+
+Then add an `app/Modules/IA/` module (auto-discovered like any other) that wires the SDK
+(`PhpAI\Bootstrap`, `PhpAI\DriverFactory`, `PhpAI\RAG\RAGEngine`) into controllers and exposes the
+endpoints you need, e.g. `POST /ia/chat`, `/ia/ask`, `/ia/ingest`, `/ia/retrieve`.
+
+Configure the driver via environment variables:
+
+| Variable | Description |
+|---|---|
+| `AI_DRIVER` | `local` / `cloud` / `cluster` |
+| `AI_CLOUD_PROVIDER` | e.g. `groq`, `openai` |
+| `AI_CLOUD_API_KEY` | Provider API key |
+| `AI_CLOUD_MODEL` | Chat/completion model |
+| `AI_CLOUD_EMBEDDING_MODEL` | Embedding model (RAG) |
+| `RAG_SQLITE_PATH` | Vector store path, e.g. `storage/ai/vectors.db` |
+
+If you don't need AI, skip this section entirely — nothing in the core depends on it.
+
+---
+
 ## Why not Laravel?
 
 | | Modux | Laravel |
@@ -1235,11 +1260,7 @@ Optional:
 | DI | Explicit constructor injection | Facades + service locator |
 | Magic | None | `Auth::user()`, `DB::table()`, `Cache::get()`, ... |
 | ORM | Raw PDO (you control every query) | Eloquent |
-<<<<<<< HEAD
 | Queue / Events | DB-backed async queue + synchronous `EventDispatcher` | Full async queue + broadcasting |
-=======
-| Queue / Events | Synchronous `EventDispatcher` | Full async queue + broadcasting |
->>>>>>> a5a8fce (tenant clients)
 | Validation rules | 16 essential | 50+ |
 | Learning curve | Read the source, understand everything | Learn the framework conventions |
 | Suited for | Controlled APIs, internal tools, multi-tenant SaaS | Full-featured web apps |

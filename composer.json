@@ -9,17 +9,9 @@
             "homepage": "https://github.com/cynchro/modux"
         }
     ],
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../../modulos/ia",
-            "options": {"symlink": true}
-        }
-    ],
     "require": {
         "php": "^8.2",
         "firebase/php-jwt": "^6.10",
-        "cynchro/modux-ia": "@dev",
         "phpmailer/phpmailer": "^6.9",
         "psr/container": "^2.0",
         "psr/log": "^3.0",
@@ -29,6 +21,9 @@
         "phpunit/phpunit": "^11.0",
         "squizlabs/php_codesniffer": "^3.9",
         "phpstan/phpstan": "^1.11"
+    },
+    "suggest": {
+        "cynchro/modux-ia": "SDK opcional de IA (LLM + RAG). Instálalo con `composer require cynchro/modux-ia` y añade el módulo app/Modules/IA para habilitar los endpoints /ia/*."
     },
     "autoload": {
         "psr-4": {

@@ -1,17 +1,17 @@
-# Ejecutar desde la raíz del monorepo: docker compose up --build
+# Ejecutar desde la raíz del proyecto: docker compose up --build
 #
-# Creá `backend/.env` desde `backend/.env.example` y usá DB_HOST=moduxdb para el servicio MySQL de abajo.
+# Creá `.env` desde `.env.example` y usá DB_HOST=moduxdb para el servicio MySQL de abajo.
 
 services:
   modux-backend:
     build:
-      context: ./backend
+      context: .
       dockerfile: docker/Dockerfile
     container_name: moduxbackend
     ports:
       - "8080:80"
     volumes:
-      - ./backend:/var/www/html
+      - .:/var/www/html
     environment:
       DB_HOST: moduxdb
       DB_PORT: '3306'
