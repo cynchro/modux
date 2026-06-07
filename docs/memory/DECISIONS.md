@@ -238,6 +238,28 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   Validación: 9 tests del paquete + e2e contra MySQL real junto al base (subscribe escribe
   → `DbEntitlementResolver` lee allows/limit → cancel limpia).
 
+### D16 — Fase 6: adaptadores de pasarela (Stripe + Mercado Pago)
+- **Qué**: dos paquetes separados, `cynchro/modux-billing-stripe` y
+  `cynchro/modux-billing-mercadopago`, que implementan `PaymentGatewayInterface`
+  (`createCheckout`/`parseWebhook`/`cancel`) + un `verifyWebhook` propio de cada pasarela.
+- **Por qué**: cierra "pasarela de pago (Stripe + Mercado Pago para AR)" del review, como
+  add-ons opcionales (no en el base, no en el core de billing).
+- **Decisiones de diseño**:
+  - **HTTP liviano (curl), sin los SDKs oficiales** — consistente con el patrón de
+    `modux-ia`. El HTTP se abstrae tras un `HttpClientInterface` por paquete (testeable).
+  - **Stripe**: webhook "gordo" (trae el objeto) → `parseWebhook` mapea sin HTTP. Firma
+    `Stripe-Signature: t=,v1=` = mismo esquema que el `WebhookVerifier` del base.
+  - **Mercado Pago**: webhook "delgado" (solo id) → `parseWebhook` hace `GET /preapproval/
+    {id}` para el status y lo mapea. Firma sobre el manifest `id;request-id;ts` (esquema
+    propio de MP). Suscripciones vía `preapproval`.
+  - **Dependencia cross-repo**: cada adaptador declara `cynchro/modux-billing` vía
+    repository **VCS (GitHub)** (no `path`), para que su CI la resuelva sin Packagist
+    (probado: composer la clona del repo público).
+- **Tradeoff**: sin los SDKs oficiales se asumen el formato de payloads/firmas de cada
+  pasarela (puede requerir ajustes ante cambios de la API). Validación: 9 tests por paquete
+  (`parseWebhook`, `verifyWebhook`, requests con HTTP mock); el ida-y-vuelta real con la
+  API necesita credenciales del usuario (no se pudo e2e en esta sesión).
+
 ---
 
 ## Convención de trabajo adoptada (meta-decisión)

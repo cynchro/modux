@@ -371,7 +371,7 @@ Status codes fijados:
 | 3 | `tenant_entitlements` + `EntitlementResolver`/`Set` + `EntitlementMiddleware` | base | gating del SaaS | ✅ implementada (lectura+gating; escritura → Fase 5) |
 | 4 | `usage_events` + `UsageRecorder` + `QuotaMiddleware` + `entitlements:roll-periods` | base | metering | ✅ implementada |
 | 5 | `cynchro/modux-billing` core + `plan_entitlements` → escribe entitlements | módulo | planes | ✅ implementada (en `../modulos/billing`) |
-| 6 | `-stripe` / `-mercadopago` | módulos | cobro real | pendiente |
+| 6 | `-stripe` / `-mercadopago` | módulos | cobro real | ✅ implementada (paquetes separados) |
 | 7 | `cynchro/modux-oauth` (opcional) | módulo | OAuth server | pendiente |
 
 Fases 1–4 son el **base** y prerequisito; 5–7 son módulos. Cada fase del base

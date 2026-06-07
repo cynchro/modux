@@ -42,12 +42,24 @@ División acordada:
   `TenantEntitlementWriter` (única costura billing→base: escribe `tenant_entitlements`).
   9 tests + e2e contra MySQL real junto al base (subscribe escribe → base lee → cancel
   limpia). El framework base **no** lo requiere (opcional, como `modux-ia`).
-- ⏭️ **Fase 6 (SIGUIENTE)** — adaptadores de pasarela como **paquetes separados**:
-  `cynchro/modux-billing-stripe` y `cynchro/modux-billing-mercadopago`. Implementan
-  `Cynchro\Billing\Contracts\PaymentGatewayInterface` (createCheckout/parseWebhook/cancel).
-  Verifican el webhook con el `WebhookVerifier` del base (Fase 2) antes de
-  `BillingManager::handleEvent()`. Necesitan los SDKs reales (stripe-php, mercadopago sdk).
-- ⬜ Fase 7 — opcional `cynchro/modux-oauth` (authorization server).
+- ✅ **Fase 6** — adaptadores de pasarela como **paquetes separados** (repos propios):
+  - `cynchro/modux-billing-stripe` (`StripeGateway`, namespace `Cynchro\Billing\Stripe`):
+    Checkout Session, `parseWebhook` (customer.subscription.* / invoice.*), `cancel`,
+    `verifyWebhook` (Stripe-Signature `t=,v1=`). HTTP liviano (curl, sin SDK). Pusheado.
+  - `cynchro/modux-billing-mercadopago` (`MercadoPagoGateway`): preapproval, `parseWebhook`
+    (notificación delgada → GET /preapproval/{id} → status), `cancel` (PUT cancelled),
+    `verifyWebhook` (manifest `id;request-id;ts`). Commit local `9819ac7`, **falta remoto**.
+  - Ambos: dependencia `modux-billing` vía repository VCS (GitHub), 9 tests c/u, CI+release.
+  - Validación: `parseWebhook`/`verifyWebhook`/construcción de requests con HTTP mock.
+    El ida-y-vuelta real (createCheckout/cancel/GET) **requiere credenciales del usuario**.
+- ⬜ **Fase 7 (opcional)** — `cynchro/modux-oauth` (authorization server). El review NO lo
+  pedía explícitamente como bloqueante; queda como mejora futura.
+
+### Integración pendiente (cuando se arme una app que cobre)
+Un `app/Modules/Billing` (en una instancia, no en el base) que: exponga `/billing/checkout`
+(usa `gateway->createCheckout`) y `/billing/webhook/{gateway}` (verifica firma con el
+adaptador → `gateway->parseWebhook` → `BillingManager::handleEvent`). Más un seeder/CLI de
+planes. Es trabajo de integración HTTP, no de los paquetes (que ya están listos).
 
 ### Nota de integración (pendiente, cuando se quiera una app que use billing)
 El ADR mencionaba un `app/Modules/Billing` que consume el SDK. Siguiendo el patrón de
