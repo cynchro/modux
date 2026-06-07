@@ -165,6 +165,29 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   verificar firmas. Validación: 7 tests unitarios con `ArrayCache`/`Request` reales +
   sanity de wiring del container (no requiere DB).
 
+### D13 — Fase 3: motor de entitlements (lectura + gating)
+- **Qué**: migración `0008_create_tenant_entitlements_table` (con `period_start/period_end/
+  source/expires_at`, `UNIQUE(tenant_id, feature)`); value objects puros `Entitlement` y
+  `EntitlementSet` (`allows/limit/remaining/get`); `EntitlementResolverInterface` +
+  `DbEntitlementResolver` (solo lectura); `EntitlementMiddleware:<feature>` →
+  `PaymentRequiredException` (**402**); binding en `bootstrap/app.php`.
+- **Por qué**: es el corazón del gating SaaS y el contrato público clave del base. Vive en
+  el chasis porque es autorización (hermano de RBAC), no comercial.
+- **Decisiones de diseño**:
+  - `EntitlementSet` es un **value object puro sin I/O**: `remaining($feature, $used)`
+    recibe `$used` desde afuera (no toca DB/cache). El conteo de uso (Fase 4) lo hará
+    `QuotaMiddleware` con `UsageRecorder` + el `periodStart` que expone `get()`. *(Refina
+    el ADR, que insinuaba un `usage` dentro del set: se prefirió pureza/testeabilidad.)*
+  - `DbEntitlementResolver` **sin cache** por ahora (correctitud sobre optimización; la
+    cache exige invalidación al escribir → se evalúa en una fase posterior).
+  - **Solo lectura** en el base: la escritura de `tenant_entitlements` es de billing
+    (Fase 5) o manual (`source='manual'`). Mantiene a los módulos de producto
+    desacoplados de billing.
+  - **402** para feature ausente/deshabilitada (vs 403 de scope/permiso).
+- **Tradeoff**: el contrato (`EntitlementResolverInterface`, `EntitlementSet`) es API
+  pública → SemVer estricto. Validación: 15 tests unitarios + e2e contra MySQL real
+  (resolver mapea flag/quota/seat/períodos/`enabled`; middleware decide 200 vs 402).
+
 ---
 
 ## Convención de trabajo adoptada (meta-decisión)

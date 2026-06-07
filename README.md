@@ -1016,7 +1016,7 @@ return new class {
 ## Testing
 
 ```bash
-composer test      # PHPUnit (190 tests)
+composer test      # PHPUnit (205 tests)
 composer lint      # phpcs PSR-12
 composer analyse   # phpstan level 6 (PHPStan 2.x)
 ```
@@ -1132,6 +1132,42 @@ $router->group([AuthMiddleware::class, TenantMiddleware::class], function ($rout
 ```
 
 The middleware throws `ForbiddenException` (403) if the authenticated user's role does not have the requested permission. `AdminMiddleware` still covers simple admin-only gates; use `PermissionMiddleware` for fine-grained per-operation control.
+
+---
+
+## Entitlements — tenant feature gating
+
+Entitlements answer "**what does this tenant have?**" — which modules/features, how many
+seats, what quotas — independently of who the user is (RBAC) or what a credential may touch
+(scopes). They live in `tenant_entitlements` and are read through
+`EntitlementResolverInterface` (`App\Support\Entitlements\DbEntitlementResolver`).
+
+Three types: `flag` (has / hasn't), `quota` (numeric limit per cycle), `seat` (seats).
+`limit_value` null = unlimited. Features are namespaced (`ia.rag`, `bots.outbound`).
+
+Gate a route with the parametrized middleware (after `TenantMiddleware`):
+
+```php
+$router->post('/ia/ask', [IAController::class, 'ask'],
+    [AuthMiddleware::class, TenantMiddleware::class,
+     EntitlementMiddleware::class . ':ia.rag']);
+```
+
+Missing/disabled feature → **402 Payment Required** (an actionable "upgrade your plan"
+signal, distinct from 403). In code:
+
+```php
+$set = $resolver->for($tenantId);
+$set->allows('ia.rag');             // bool (flag / gating)
+$set->limit('api.calls');           // ?int (null = unlimited)
+$set->remaining('api.calls', $used);// ?int, used passed in (no I/O in the value object)
+```
+
+**The base only reads `tenant_entitlements`.** It's populated by the optional billing
+module (`source = 'billing:*'`) or by hand (`source = 'manual'`) — so product modules
+(e.g. `modux-ia`) never depend on billing. Quota cycle anchoring (`period_start/period_end`)
+and usage metering arrive in later phases — see
+`docs/adr/0001-saas-identity-entitlements-billing.md`.
 
 ---
 

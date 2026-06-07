@@ -23,20 +23,24 @@ División acordada:
   HMAC-SHA256 sobre `<ts>.<rawBody>`, ventana de timestamp y anti-replay vía
   `CacheInterface`. Añadido `Request::rawBody()`. Binding en `bootstrap/app.php`.
   Cierra "endurecer webhooks" del review.
-- ⏭️ **Fase 3 (SIGUIENTE)** — `tenant_entitlements` + `EntitlementResolver`/`EntitlementSet`
-  + `EntitlementMiddleware` (corazón del gating SaaS). Es el contrato público clave
-  (SemVer estricto). Recordar `period_start/period_end` denormalizados (D2 del ADR) y el
-  status 402 para entitlement faltante.
-- ⬜ Fase 4 — `usage_events` + `UsageRecorder` + `QuotaMiddleware` +
-  comando `entitlements:roll-periods`.
+- ✅ **Fase 3** — motor de entitlements (LECTURA + gating): migración
+  `0008_create_tenant_entitlements_table`; `Entitlement` + `EntitlementSet` (value objects
+  puros); `EntitlementResolverInterface` + `DbEntitlementResolver`; `EntitlementMiddleware:
+  <feature>` (402); `PaymentRequiredException`. La **escritura** de `tenant_entitlements`
+  llegará con billing (Fase 5) o se hace a mano (`source='manual'`).
+- ⏭️ **Fase 4 (SIGUIENTE)** — `usage_events` + `UsageRecorderInterface` + `QuotaMiddleware`
+  + comando `entitlements:roll-periods`. `QuotaMiddleware` calculará `used` contando
+  `usage_events` desde `EntitlementSet::get($feature)->periodStart` y llamará
+  `remaining($feature, $used)` (que ya existe y es puro). 429 + `Retry-After`.
 - ⬜ Fase 5–7 — `cynchro/modux-billing` (+ `-stripe`/`-mercadopago`), opcional `modux-oauth`.
 
 ## Problemas actuales
 
-- **Ninguno bloqueante.** La base está 100% verde: **190 tests / 278 assertions**,
+- **Ninguno bloqueante.** La base está 100% verde: **205 tests / 305 assertions**,
   **PHPStan 2.x 0 errores**, **PHPCS limpio**. Validado e2e contra MySQL real (Docker):
-  migraciones, login JWT, API keys (auth + CRUD). El `WebhookVerifier` (sin DB) se validó
-  con tests + sanity de wiring del container.
+  migraciones, login JWT, API keys (auth + CRUD), entitlements (resolver + middleware
+  contra DB real, gating 200 vs 402). El `WebhookVerifier` (sin DB) se validó con tests +
+  sanity de wiring del container.
 
 ## Qué ya intenté / cómo se llegó acá (esta sesión, 2026-06-07)
 

@@ -61,6 +61,13 @@ $app->singleton(
     )
 );
 
+$app->singleton(
+    App\Support\Contracts\EntitlementResolverInterface::class,
+    fn ($c) => new App\Support\Entitlements\DbEntitlementResolver(
+        $c->get(\PDO::class)
+    )
+);
+
 // ── Stage 7: Router & Kernel ──────────────────────────────────────────────────
 $app->singleton(App\Support\Router::class, fn ($c) =>
     new App\Support\Router($c));
