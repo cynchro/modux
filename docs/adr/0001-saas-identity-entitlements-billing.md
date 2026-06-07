@@ -369,7 +369,7 @@ Status codes fijados:
 | 1.b | Módulo `ApiKeys` — CRUD (`/api-keys`) protegido por scope `apikeys.manage` | base | gestión de keys por el tenant | ✅ implementada |
 | 2 | `WebhookVerifier` (HMAC + timestamp + anti-replay) | base | pagos seguros, integraciones | ✅ implementada |
 | 3 | `tenant_entitlements` + `EntitlementResolver`/`Set` + `EntitlementMiddleware` | base | gating del SaaS | ✅ implementada (lectura+gating; escritura → Fase 5) |
-| 4 | `usage_events` + `UsageRecorder` + `QuotaMiddleware` + `entitlements:roll-periods` | base | metering | pendiente |
+| 4 | `usage_events` + `UsageRecorder` + `QuotaMiddleware` + `entitlements:roll-periods` | base | metering | ✅ implementada |
 | 5 | `cynchro/modux-billing` core + `plan_entitlements` → escribe entitlements | módulo | planes | pendiente |
 | 6 | `-stripe` / `-mercadopago` | módulos | cobro real | pendiente |
 | 7 | `cynchro/modux-oauth` (opcional) | módulo | OAuth server | pendiente |

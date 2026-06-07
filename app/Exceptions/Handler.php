@@ -40,6 +40,10 @@ class Handler
             header('Allow: ' . implode(', ', $e->getAllowedMethods()));
         }
 
+        if ($e instanceof QuotaExceededException && $e->getRetryAfter() !== null) {
+            header('Retry-After: ' . $e->getRetryAfter());
+        }
+
         echo json_encode($body, JSON_UNESCAPED_UNICODE);
     }
 

@@ -34,6 +34,7 @@ match ($command) {
     'queue:failed'     => queueFailed(),
     'queue:retry'      => queueRetry($arg),
     'queue:flush'      => queueFlush(),
+    'entitlements:roll-periods' => rollEntitlementPeriods(),
     default            => help(),
 };
 
@@ -393,6 +394,56 @@ function queueFlush(): void
     echo PHP_EOL;
 }
 
+// ── Entitlements ──────────────────────────────────────────────────────────────
+
+/**
+ * Red de seguridad: avanza los ciclos de quota vencidos (period_end < now) por
+ * su propia duración hasta cubrir el presente. En operación normal billing
+ * mantiene period_start/period_end vía webhooks; este comando es idempotente y
+ * cubre los huecos. Mover la ventana "resetea" la cuota sin borrar usage_events.
+ */
+function rollEntitlementPeriods(): void
+{
+    $pdo = buildPdo();
+    $now = time();
+
+    $rows = $pdo->query(
+        "SELECT id, period_start, period_end FROM tenant_entitlements
+         WHERE type = 'quota' AND period_start IS NOT NULL AND period_end IS NOT NULL
+           AND period_end < NOW()"
+    )->fetchAll(\PDO::FETCH_ASSOC);
+
+    $update = $pdo->prepare(
+        'UPDATE tenant_entitlements SET period_start = ?, period_end = ? WHERE id = ?'
+    );
+
+    $rolled = 0;
+    foreach ($rows as $row) {
+        $start = strtotime((string) $row['period_start']);
+        $end   = strtotime((string) $row['period_end']);
+        $span  = $end - $start;
+
+        if ($span <= 0) {
+            continue; // datos inconsistentes — no tocar
+        }
+
+        while ($end < $now) {
+            $start = $end;
+            $end  += $span;
+        }
+
+        $update->execute([
+            date('Y-m-d H:i:s', $start),
+            date('Y-m-d H:i:s', $end),
+            $row['id'],
+        ]);
+        $rolled++;
+    }
+
+    line("<green>Rolled {$rolled} entitlement period(s).</green>");
+    echo PHP_EOL;
+}
+
 function showRoutes(): void
 {
     require_once BASE_PATH . '/vendor/autoload.php';
@@ -499,6 +550,7 @@ function help(): void
     echo '    queue:failed                                  List failed jobs' . PHP_EOL;
     echo '    queue:retry <id>                              Retry a failed job' . PHP_EOL;
     echo '    queue:flush                                   Delete all failed jobs' . PHP_EOL;
+    echo '    entitlements:roll-periods                     Advance expired quota cycles (safety net)' . PHP_EOL;
     echo PHP_EOL;
     echo '  Examples:' . PHP_EOL;
     echo '    php modux make:module Cliente' . PHP_EOL;

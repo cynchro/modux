@@ -188,6 +188,32 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   pública → SemVer estricto. Validación: 15 tests unitarios + e2e contra MySQL real
   (resolver mapea flag/quota/seat/períodos/`enabled`; middleware decide 200 vs 402).
 
+### D14 — Fase 4: metering (uso + cuotas)
+- **Qué**: migración `0009_create_usage_events_table`; `UsageRecorderInterface` +
+  `DbUsageRecorder` (`record()` con idempotencia vía `INSERT IGNORE` sobre
+  `idempotency_key UNIQUE`; `total()` = `SUM(quantity)` desde una fecha);
+  `QuotaMiddleware:<feature>`; `QuotaExceededException` (**429** con `Retry-After`);
+  el `Handler` aplica el header `Retry-After`; comando CLI `entitlements:roll-periods`.
+- **Por qué**: cierra las cuotas del SaaS y el "metering de uso (bots, reportes, API
+  calls)" del review.
+- **Decisiones de diseño**:
+  - **El registro de uso es explícito** (lo hace el código de negocio vía
+    `UsageRecorder::record()`), no el middleware: el costo por request varía (1 api.call vs
+    N tokens). `QuotaMiddleware` solo **chequea**.
+  - `QuotaMiddleware` cuenta `usage_events` desde `entitlement->periodStart` (o inicio de
+    mes calendario si no hay billing) y usa el `remaining()` puro de la Fase 3.
+  - **402 vs 429**: sin la feature → 402; con la feature pero cuota agotada → 429 +
+    `Retry-After` (segundos hasta `periodEnd`).
+  - `entitlements:roll-periods` avanza ciclos vencidos **por su propia duración** (en
+    segundos) hasta cubrir el presente; idempotente. Es una red de seguridad —billing
+    mantiene los períodos vía webhooks—; usar segundos (no meses calendario) es una
+    aproximación aceptable para el fallback.
+  - Mover la ventana **resetea la cuota sin borrar `usage_events`** (auditoría/rating).
+- **Tradeoff**: leer `php://input`/contar uso agrega un `SELECT SUM` por request con
+  cuota (aceptable; indexado por `(tenant_id, metric, occurred_at)`). Validación: 9 tests
+  unitarios + e2e contra MySQL real (record/total/idempotencia, 200→429 + Retry-After,
+  roll-periods avanzó `[ene–feb]` → `[jun–jul]`).
+
 ---
 
 ## Convención de trabajo adoptada (meta-decisión)

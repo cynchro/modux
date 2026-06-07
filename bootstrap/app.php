@@ -68,6 +68,13 @@ $app->singleton(
     )
 );
 
+$app->singleton(
+    App\Support\Contracts\UsageRecorderInterface::class,
+    fn ($c) => new App\Support\Usage\DbUsageRecorder(
+        $c->get(\PDO::class)
+    )
+);
+
 // ── Stage 7: Router & Kernel ──────────────────────────────────────────────────
 $app->singleton(App\Support\Router::class, fn ($c) =>
     new App\Support\Router($c));

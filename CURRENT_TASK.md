@@ -28,19 +28,30 @@ División acordada:
   puros); `EntitlementResolverInterface` + `DbEntitlementResolver`; `EntitlementMiddleware:
   <feature>` (402); `PaymentRequiredException`. La **escritura** de `tenant_entitlements`
   llegará con billing (Fase 5) o se hace a mano (`source='manual'`).
-- ⏭️ **Fase 4 (SIGUIENTE)** — `usage_events` + `UsageRecorderInterface` + `QuotaMiddleware`
-  + comando `entitlements:roll-periods`. `QuotaMiddleware` calculará `used` contando
-  `usage_events` desde `EntitlementSet::get($feature)->periodStart` y llamará
-  `remaining($feature, $used)` (que ya existe y es puro). 429 + `Retry-After`.
-- ⬜ Fase 5–7 — `cynchro/modux-billing` (+ `-stripe`/`-mercadopago`), opcional `modux-oauth`.
+- ✅ **Fase 4** — metering: migración `0009_create_usage_events_table`;
+  `UsageRecorderInterface` + `DbUsageRecorder` (record con idempotencia vía INSERT IGNORE,
+  total = SUM); `QuotaMiddleware:<feature>` (cuenta `usage_events` desde `periodStart`,
+  usa `remaining()`; 402 si no tiene feature, 429 + `Retry-After` si agotada);
+  `QuotaExceededException`; `Handler` aplica el header `Retry-After`; comando CLI
+  `entitlements:roll-periods` (red de seguridad para ciclos vencidos).
+- ⏭️ **Fase 5 (SIGUIENTE)** — primer **módulo opcional**: `cynchro/modux-billing` (core
+  agnóstico de pasarela). Tablas `plans`, `plan_entitlements`, `subscriptions`;
+  `PaymentGatewayInterface`. Al activar/renovar un plan **escribe `tenant_entitlements`**
+  (incl. `period_start/period_end`), que el base ya lee. Vive fuera del chasis, estilo
+  `modux-ia` (en `../modulos/`, publicable en Packagist). **Decisión a tomar con el
+  usuario**: ¿se crea como paquete separado en `../modulos/billing` o se prototipa dentro
+  del repo? (`modux-ia` vive en `../modulos/ia`).
+- ⬜ Fase 6 — adaptadores `-stripe` / `-mercadopago`. Usan el `WebhookVerifier` (Fase 2).
+- ⬜ Fase 7 — opcional `cynchro/modux-oauth` (authorization server).
 
 ## Problemas actuales
 
-- **Ninguno bloqueante.** La base está 100% verde: **205 tests / 305 assertions**,
+- **Ninguno bloqueante.** La base está 100% verde: **214 tests / 319 assertions**,
   **PHPStan 2.x 0 errores**, **PHPCS limpio**. Validado e2e contra MySQL real (Docker):
-  migraciones, login JWT, API keys (auth + CRUD), entitlements (resolver + middleware
-  contra DB real, gating 200 vs 402). El `WebhookVerifier` (sin DB) se validó con tests +
-  sanity de wiring del container.
+  migraciones, login JWT, API keys (auth + CRUD), entitlements (gating 200 vs 402),
+  metering (record/total/idempotencia), quota (200 vs 429 + Retry-After) y el comando
+  `entitlements:roll-periods`. El `WebhookVerifier` (sin DB) se validó con tests + sanity
+  de wiring del container.
 
 ## Qué ya intenté / cómo se llegó acá (esta sesión, 2026-06-07)
 

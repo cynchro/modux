@@ -1016,7 +1016,7 @@ return new class {
 ## Testing
 
 ```bash
-composer test      # PHPUnit (205 tests)
+composer test      # PHPUnit (214 tests)
 composer lint      # phpcs PSR-12
 composer analyse   # phpstan level 6 (PHPStan 2.x)
 ```
@@ -1165,9 +1165,39 @@ $set->remaining('api.calls', $used);// ?int, used passed in (no I/O in the value
 
 **The base only reads `tenant_entitlements`.** It's populated by the optional billing
 module (`source = 'billing:*'`) or by hand (`source = 'manual'`) — so product modules
-(e.g. `modux-ia`) never depend on billing. Quota cycle anchoring (`period_start/period_end`)
-and usage metering arrive in later phases — see
-`docs/adr/0001-saas-identity-entitlements-billing.md`.
+(e.g. `modux-ia`) never depend on billing.
+
+### Usage metering & quotas
+
+Record usage via `UsageRecorderInterface` (`App\Support\Usage\DbUsageRecorder`, table
+`usage_events`). Recording is **explicit** — the consuming code decides the cost per call:
+
+```php
+$usage->record($tenantId, 'api.calls', 1, $idempotencyKey);  // idempotency_key dedupes retries
+$usage->record($tenantId, 'ia.tokens', $tokensUsed);
+```
+
+`QuotaMiddleware:<feature>` enforces the limit (after `TenantMiddleware`). It counts
+`usage_events` from the entitlement's `period_start` (or the calendar month start when there's
+no billing) and compares against the limit:
+
+```php
+$router->post('/ia/ask', [IAController::class, 'ask'],
+    [AuthMiddleware::class, TenantMiddleware::class, QuotaMiddleware::class . ':api.calls']);
+```
+
+- no entitlement / disabled → **402**, unlimited (`limit_value` null) → passes,
+- quota exhausted → **429** with `Retry-After` (seconds until the cycle resets).
+
+Quota cycles are anchored to the subscription's `period_start/period_end` (denormalized into
+`tenant_entitlements` by billing). Moving the window resets the quota **without deleting**
+`usage_events` (kept for audit/rating). As a safety net for missed renewals:
+
+```bash
+php modux entitlements:roll-periods   # advances expired quota cycles by their own span; idempotent
+```
+
+See `docs/adr/0001-saas-identity-entitlements-billing.md` for the full design.
 
 ---
 
