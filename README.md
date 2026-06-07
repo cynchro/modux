@@ -1414,6 +1414,12 @@ The webhook is verified with the adapter's signature scheme, normalized, and app
 billing:<gateway>`) — picked up by the **Entitlements** gating above. Configure gateways in
 `config/billing.php` (env: `BILLING_GATEWAY`, `STRIPE_*`, `MP_*`).
 
+Define your plans + their entitlements with the idempotent seeder (edit the `$plans` array):
+
+```bash
+php seeders/BillingPlansSeeder.php   # creates plans/plan_entitlements; re-running upserts
+```
+
 > Architecture: the base only **reads** `tenant_entitlements`; billing **writes** it — so
 > product modules never depend on billing. See
 > `docs/adr/0001-saas-identity-entitlements-billing.md`.
