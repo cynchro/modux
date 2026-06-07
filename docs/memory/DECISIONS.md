@@ -260,6 +260,27 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   (`parseWebhook`, `verifyWebhook`, requests con HTTP mock); el ida-y-vuelta real con la
   API necesita credenciales del usuario (no se pudo e2e en esta sesión).
 
+### D17 — Integración HTTP: módulo `app/Modules/Billing` (opcional)
+- **Qué**: módulo de integración en el repo del framework que conecta los adaptadores +
+  `BillingManager` con endpoints HTTP (`POST /billing/checkout`, `POST /billing/webhook/
+  {gateway}`). `GatewayFactory`, `ServiceProvider` (guard `class_exists`), `BillingController`
+  (webhook verifica firma por pasarela vía `instanceof` + `verifyWebhook`), `CheckoutRequest`,
+  `config/billing.php`.
+- **Por qué**: el usuario pidió la integración HTTP de ejemplo/uso real.
+- **Decisión (elegida por el usuario): opcional vía `suggest` + `require-dev`**:
+  - billing+adaptadores en **`require-dev`** (disponibles para dev/CI/análisis/tests) +
+    **`suggest`** (señal a producción) + **`repositories` VCS** (GitHub) para resolverlos.
+  - El módulo se **auto-activa con guard `class_exists(BillingManager)`** en `routes.php` y
+    `ServiceProvider`; en producción `--no-dev` el chasis no trae billing y el módulo queda
+    inactivo. Mantiene el chasis liviano (mismo principio que IA), pero con el módulo
+    versionado en el repo (a diferencia de IA, que se sacó del todo).
+  - El webhook es **público** (las pasarelas no mandan JWT); la seguridad es la **firma**.
+- **Tradeoff**: el CI/quality-gate del chasis ahora instala billing+adaptadores (dev) desde
+  GitHub (acopla el CI a esos repos públicos). `verifyWebhook` no está en la interfaz común
+  (firmas distintas por pasarela) → el controller usa `instanceof`. Validación: 6 tests
+  (GatewayFactory + BillingController firma ok/mal) + e2e contra MySQL real (webhook Stripe
+  firmado escribió `tenant_entitlements`; firma inválida 401).
+
 ---
 
 ## Convención de trabajo adoptada (meta-decisión)

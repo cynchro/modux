@@ -55,11 +55,17 @@ División acordada:
 - ⬜ **Fase 7 (opcional)** — `cynchro/modux-oauth` (authorization server). El review NO lo
   pedía explícitamente como bloqueante; queda como mejora futura.
 
-### Integración pendiente (cuando se arme una app que cobre)
-Un `app/Modules/Billing` (en una instancia, no en el base) que: exponga `/billing/checkout`
-(usa `gateway->createCheckout`) y `/billing/webhook/{gateway}` (verifica firma con el
-adaptador → `gateway->parseWebhook` → `BillingManager::handleEvent`). Más un seeder/CLI de
-planes. Es trabajo de integración HTTP, no de los paquetes (que ya están listos).
+### Integración HTTP — ✅ implementada (`app/Modules/Billing`)
+Módulo en el repo del framework, **opcional**: billing+adaptadores en `require-dev` +
+`suggest` + `repositories` VCS; el módulo se auto-activa con guard `class_exists` (en
+producción `--no-dev` el chasis no trae billing). Componentes: `GatewayFactory` (arma el
+adaptador desde `config/billing.php`), `ServiceProvider` (registra BillingManager/repos/
+factory, con guard), `BillingController` (`checkout` + `webhook` con verificación de firma
+por pasarela), `CheckoutRequest`, `routes.php` (guard). Endpoints: `POST /billing/checkout`
+(auth+tenant), `POST /billing/webhook/{gateway}` (público, verificado por firma).
+Validado e2e contra MySQL real: webhook Stripe firmado → 200 → escribió `tenant_entitlements`
+(source=billing:stripe); firma inválida → 401. **Pendiente menor**: un seeder/CLI de planes
+y el e2e de `checkout` (requiere API real).
 
 ### Nota de integración (pendiente, cuando se quiera una app que use billing)
 El ADR mencionaba un `app/Modules/Billing` que consume el SDK. Siguiendo el patrón de

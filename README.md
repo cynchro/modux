@@ -1016,7 +1016,7 @@ return new class {
 ## Testing
 
 ```bash
-composer test      # PHPUnit (214 tests)
+composer test      # PHPUnit (220 tests)
 composer lint      # phpcs PSR-12
 composer analyse   # phpstan level 6 (PHPStan 2.x)
 ```
@@ -1390,6 +1390,33 @@ Configure the driver via environment variables:
 | `RAG_SQLITE_PATH` | Vector store path, e.g. `storage/ai/vectors.db` |
 
 If you don't need AI, skip this section entirely — nothing in the core depends on it.
+
+## Optional: Billing module
+
+Modux ships **without** billing by default. It's an opt-in add-on: install the SDK + a
+gateway adapter, and the bundled `app/Modules/Billing` activates itself (guarded by
+`class_exists`, so the core stays clean when billing isn't installed).
+
+```bash
+composer require cynchro/modux-billing cynchro/modux-billing-stripe
+# or, for Argentina:  cynchro/modux-billing-mp
+```
+
+The module exposes:
+
+```
+POST /billing/checkout              { "plan": "pro" }   → gateway checkout URL (auth + tenant)
+POST /billing/webhook/{gateway}     (public, verified by signature)
+```
+
+The webhook is verified with the adapter's signature scheme, normalized, and applied via
+`BillingManager::handleEvent()`, which writes the tenant's entitlements (`source =
+billing:<gateway>`) — picked up by the **Entitlements** gating above. Configure gateways in
+`config/billing.php` (env: `BILLING_GATEWAY`, `STRIPE_*`, `MP_*`).
+
+> Architecture: the base only **reads** `tenant_entitlements`; billing **writes** it — so
+> product modules never depend on billing. See
+> `docs/adr/0001-saas-identity-entitlements-billing.md`.
 
 ---
 

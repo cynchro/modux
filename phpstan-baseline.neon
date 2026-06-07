@@ -189,6 +189,12 @@ parameters:
 		-
 			message: '#^Variable \$router might not be defined\.$#'
 			identifier: variable.undefined
+			count: 2
+			path: app/Modules/Billing/routes.php
+
+		-
+			message: '#^Variable \$router might not be defined\.$#'
+			identifier: variable.undefined
 			count: 1
 			path: app/Modules/Cliente/routes.php
 

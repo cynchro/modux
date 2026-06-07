@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "be9cbe2016a2430f67629c2ccdab4f7d",
+    "content-hash": "08cee833746e7a358b60bc55a6ef15ad",
     "packages": [
         {
             "name": "firebase/php-jwt",
@@ -728,6 +728,231 @@
         }
     ],
     "packages-dev": [
+        {
+            "name": "cynchro/modux-billing",
+            "version": "v0.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/cynchro/modux-billing.git",
+                "reference": "fe14b2383fba105875c3be90ccc2ad567926343b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/cynchro/modux-billing/zipball/fe14b2383fba105875c3be90ccc2ad567926343b",
+                "reference": "fe14b2383fba105875c3be90ccc2ad567926343b",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "ext-pdo": "*",
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^11.0",
+                "squizlabs/php_codesniffer": "^3.9"
+            },
+            "suggest": {
+                "cynchro/modux-billing-mp": "Adaptador de pasarela Mercado Pago (AR)",
+                "cynchro/modux-billing-stripe": "Adaptador de pasarela Stripe"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-main": "0.1-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Cynchro\\Billing\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Cynchro\\Billing\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "lint": [
+                    "phpcs"
+                ],
+                "fix": [
+                    "phpcbf"
+                ],
+                "analyse": [
+                    "phpstan analyse --no-progress"
+                ],
+                "test": [
+                    "phpunit"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "SDK de billing para SaaS multi-tenant: planes, suscripciones y entitlements. Agnóstico de pasarela (Stripe, Mercado Pago).",
+            "homepage": "https://github.com/cynchro/modux-billing",
+            "keywords": [
+                "billing",
+                "entitlements",
+                "mercadopago",
+                "php",
+                "saas",
+                "stripe",
+                "subscriptions"
+            ],
+            "support": {
+                "source": "https://github.com/cynchro/modux-billing/tree/v0.0.2",
+                "issues": "https://github.com/cynchro/modux-billing/issues"
+            },
+            "time": "2026-06-07T18:17:03+00:00"
+        },
+        {
+            "name": "cynchro/modux-billing-mp",
+            "version": "v0.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/cynchro/modux-billing-mp.git",
+                "reference": "267712fafddcd554c8ec799845a1d10f6abd8bdc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/cynchro/modux-billing-mp/zipball/267712fafddcd554c8ec799845a1d10f6abd8bdc",
+                "reference": "267712fafddcd554c8ec799845a1d10f6abd8bdc",
+                "shasum": ""
+            },
+            "require": {
+                "cynchro/modux-billing": ">=0.0.1 <1.0",
+                "ext-curl": "*",
+                "ext-json": "*",
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^11.0",
+                "squizlabs/php_codesniffer": "^3.9"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-main": "0.1-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Cynchro\\Billing\\MercadoPago\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Cynchro\\Billing\\MercadoPago\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "lint": [
+                    "phpcs"
+                ],
+                "fix": [
+                    "phpcbf"
+                ],
+                "analyse": [
+                    "phpstan analyse --no-progress"
+                ],
+                "test": [
+                    "phpunit"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Adaptador de pasarela Mercado Pago para cynchro/modux-billing.",
+            "homepage": "https://github.com/cynchro/modux-billing-mp",
+            "keywords": [
+                "argentina",
+                "billing",
+                "mercadopago",
+                "payments",
+                "php",
+                "subscriptions"
+            ],
+            "support": {
+                "source": "https://github.com/cynchro/modux-billing-mp/tree/v0.0.2",
+                "issues": "https://github.com/cynchro/modux-billing-mp/issues"
+            },
+            "time": "2026-06-07T18:16:44+00:00"
+        },
+        {
+            "name": "cynchro/modux-billing-stripe",
+            "version": "v0.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/cynchro/modux-billing-stripe.git",
+                "reference": "2296c1274384d40f33c5dba45bee837580ebbfd1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/cynchro/modux-billing-stripe/zipball/2296c1274384d40f33c5dba45bee837580ebbfd1",
+                "reference": "2296c1274384d40f33c5dba45bee837580ebbfd1",
+                "shasum": ""
+            },
+            "require": {
+                "cynchro/modux-billing": ">=0.0.1 <1.0",
+                "ext-curl": "*",
+                "ext-json": "*",
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^11.0",
+                "squizlabs/php_codesniffer": "^3.9"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-main": "0.1-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Cynchro\\Billing\\Stripe\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Cynchro\\Billing\\Stripe\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "lint": [
+                    "phpcs"
+                ],
+                "fix": [
+                    "phpcbf"
+                ],
+                "analyse": [
+                    "phpstan analyse --no-progress"
+                ],
+                "test": [
+                    "phpunit"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Adaptador de pasarela Stripe para cynchro/modux-billing.",
+            "homepage": "https://github.com/cynchro/modux-billing-stripe",
+            "keywords": [
+                "billing",
+                "payments",
+                "php",
+                "stripe",
+                "subscriptions"
+            ],
+            "support": {
+                "source": "https://github.com/cynchro/modux-billing-stripe/tree/v0.0.1",
+                "issues": "https://github.com/cynchro/modux-billing-stripe/issues"
+            },
+            "time": "2026-06-07T15:20:49+00:00"
+        },
         {
             "name": "myclabs/deep-copy",
             "version": "1.13.4",
