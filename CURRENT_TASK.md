@@ -74,10 +74,9 @@ detallado. El pre-push hook bloquea push si algo falla.
 ## Bloqueos / pendientes (no detienen la Fase 2)
 
 - **Acción del usuario — rotar la Groq API key**: estuvo commiteada en `backend/.env`.
-  Se limpió del historial con `git filter-repo` y **nunca llegó a GitHub** (push
-  bloqueado por Push Protection y luego historial reescrito), pero estuvo en disco en
-  claro → conviene rotarla en el panel de Groq. La key vieja:
-  `REDACTED`.
+  Se purgó del historial con `git filter-repo` y **nunca llegó a GitHub** (push bloqueado
+  por Push Protection y luego historial reescrito), pero estuvo en disco en claro →
+  conviene rotarla en el panel de Groq. El valor real no se vuelve a anotar en git.
 - **3 commits locales sin pushear** (`origin/main` = `8b3678c`, ya verificado):
   `86fc12f` (ADR 0001), `7bae294` (Fase 1), `69ad4aa` (Fase 1.b). El push de tooling
   (`8b3678c`) ya está en remoto. El usuario decide cuándo pushear el resto.
