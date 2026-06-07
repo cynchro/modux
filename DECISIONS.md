@@ -146,6 +146,25 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   le concede el scope explícito → **previene escalada de privilegios**.
 - **Tradeoff**: `ApiKeyManager` no-`final` (se aceptó por testeabilidad).
 
+### D12 — Fase 2: `WebhookVerifier` (HMAC + timestamp + anti-replay)
+- **Qué**: `WebhookVerifierInterface` + `App\Support\Webhook\WebhookVerifier`. Esquema
+  propio sin dependencias: cabecera `X-Signature: t=<ts>,v1=<hmac>`, firma
+  `HMAC-SHA256("<ts>.<rawBody>", secret)`, ventana de tiempo, comparación constante
+  (`hash_equals`) y **anti-replay por nonce de la firma vía `CacheInterface`** (TTL =
+  ventana). `sign()` para webhooks salientes. Binding singleton en `bootstrap/app.php`.
+  Se añadió `Request::rawBody()` (el cuerpo crudo se captura una vez en el constructor y
+  lo reusa `parseJson()`).
+- **Por qué**: cierra "endurecer webhooks" del review y es prerequisito de los webhooks de
+  pago (Fase 6). Liviano y transversal → va en el base.
+- **Decisión de diseño**: esquema genérico propio de Modux; los adaptadores de pasarela
+  (Stripe/MP) podrán reusar `sign()`/`verify()` o aportar su parsing y delegar el HMAC.
+  Sin middleware dedicado en esta fase (el secret depende de cada integración → se usa en
+  el controller del webhook).
+- **Tradeoff**: leer `php://input` siempre en el constructor de `Request` (antes solo si
+  `Content-Type: application/json`); irrelevante para GET/multipart, necesario para
+  verificar firmas. Validación: 7 tests unitarios con `ArrayCache`/`Request` reales +
+  sanity de wiring del container (no requiere DB).
+
 ---
 
 ## Convención de trabajo adoptada (meta-decisión)

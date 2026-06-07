@@ -792,6 +792,23 @@ Scopes (what a credential may touch) are orthogonal to RBAC permissions (what a
 user role may do) and to tenant entitlements (what a tenant has) — see
 `docs/adr/0001-saas-identity-entitlements-billing.md`.
 
+### Webhook signatures
+
+`App\Support\Webhook\WebhookVerifier` (bound to `WebhookVerifierInterface`) hardens
+inbound/outbound webhooks with a dependency-free scheme:
+
+```
+X-Signature: t=<unix_ts>,v1=<hex_hmac_sha256>
+signature  = HMAC-SHA256("<ts>.<rawBody>", secret)
+```
+
+`verify($request, $secret, $tolerance = 300)` returns true only if the HMAC matches
+(constant-time), the timestamp is within the window, **and** the signature hasn't been
+seen before (anti-replay via `CacheInterface`, TTL = window). `sign($payload, $secret)`
+produces the header for outbound webhooks. Inject the interface in any controller that
+receives provider callbacks (e.g. payment gateways) and verify against that integration's
+secret before acting. Reading the raw body relies on `Request::rawBody()`.
+
 ---
 
 ## DI Container
@@ -999,7 +1016,7 @@ return new class {
 ## Testing
 
 ```bash
-composer test      # PHPUnit (183 tests)
+composer test      # PHPUnit (190 tests)
 composer lint      # phpcs PSR-12
 composer analyse   # phpstan level 6 (PHPStan 2.x)
 ```

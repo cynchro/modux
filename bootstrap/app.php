@@ -54,6 +54,13 @@ $app->singleton(
     fn () => new App\Support\Cache\ApcuCache()
 );
 
+$app->singleton(
+    App\Support\Contracts\WebhookVerifierInterface::class,
+    fn ($c) => new App\Support\Webhook\WebhookVerifier(
+        $c->get(App\Support\Contracts\CacheInterface::class)
+    )
+);
+
 // ── Stage 7: Router & Kernel ──────────────────────────────────────────────────
 $app->singleton(App\Support\Router::class, fn ($c) =>
     new App\Support\Router($c));

@@ -19,20 +19,24 @@ División acordada:
   Commit `7bae294`.
 - ✅ **Fase 1.b** — módulo `ApiKeys` con CRUD (`/api-keys`), scope `apikeys.manage`.
   Commit `69ad4aa`.
-- ⏭️ **Fase 2 (SIGUIENTE)** — `WebhookVerifier` (HMAC + ventana de timestamp + anti-replay
-  vía `CacheInterface`). Es la pieza que cierra "endurecer webhooks" del review. **El
-  usuario pidió esta extracción de contexto ANTES de arrancar la Fase 2.**
-- ⬜ Fase 3 — `tenant_entitlements` + `EntitlementResolver`/`EntitlementSet` +
-  `EntitlementMiddleware` (corazón del gating SaaS).
+- ✅ **Fase 2** — `App\Support\Webhook\WebhookVerifier` (`WebhookVerifierInterface`):
+  HMAC-SHA256 sobre `<ts>.<rawBody>`, ventana de timestamp y anti-replay vía
+  `CacheInterface`. Añadido `Request::rawBody()`. Binding en `bootstrap/app.php`.
+  Cierra "endurecer webhooks" del review.
+- ⏭️ **Fase 3 (SIGUIENTE)** — `tenant_entitlements` + `EntitlementResolver`/`EntitlementSet`
+  + `EntitlementMiddleware` (corazón del gating SaaS). Es el contrato público clave
+  (SemVer estricto). Recordar `period_start/period_end` denormalizados (D2 del ADR) y el
+  status 402 para entitlement faltante.
 - ⬜ Fase 4 — `usage_events` + `UsageRecorder` + `QuotaMiddleware` +
   comando `entitlements:roll-periods`.
 - ⬜ Fase 5–7 — `cynchro/modux-billing` (+ `-stripe`/`-mercadopago`), opcional `modux-oauth`.
 
 ## Problemas actuales
 
-- **Ninguno bloqueante.** La base está 100% verde: **183 tests / 268 assertions**,
+- **Ninguno bloqueante.** La base está 100% verde: **190 tests / 278 assertions**,
   **PHPStan 2.x 0 errores**, **PHPCS limpio**. Validado e2e contra MySQL real (Docker):
-  migraciones, login JWT, API keys (auth + CRUD).
+  migraciones, login JWT, API keys (auth + CRUD). El `WebhookVerifier` (sin DB) se validó
+  con tests + sanity de wiring del container.
 
 ## Qué ya intenté / cómo se llegó acá (esta sesión, 2026-06-07)
 

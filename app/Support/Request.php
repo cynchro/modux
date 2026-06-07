@@ -11,6 +11,7 @@ class Request
     private array $files;
     private array $server;
     private array $jsonData;
+    private string $rawBody;
     private array $routeParams = [];
     private ?array $resolvedUser = null;
     private ?string $resolvedTenantId = null;
@@ -29,6 +30,9 @@ class Request
         $this->get      = $_GET;
         $this->files    = $_FILES;
         $this->server   = $_SERVER;
+        // El cuerpo crudo se captura una sola vez (php://input no siempre es
+        // re-leíble) y se reutiliza para JSON y para verificación de firmas (webhooks).
+        $this->rawBody  = self::$testInputStream ?? (string) file_get_contents('php://input');
         $this->jsonData = $this->parseJson();
     }
 
@@ -39,16 +43,21 @@ class Request
             return [];
         }
 
-        $raw = self::$testInputStream ?? (string) file_get_contents('php://input');
-        if ($raw === '') {
+        if ($this->rawBody === '') {
             return [];
         }
 
         try {
-            return json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+            return json_decode($this->rawBody, true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException) {
             throw new ValidationException(['body' => ['Invalid JSON payload.']]);
         }
+    }
+
+    /** Cuerpo crudo de la petición, tal cual llegó (sin parsear). */
+    public function rawBody(): string
+    {
+        return $this->rawBody;
     }
 
     public function input(string $key, mixed $default = null): mixed
