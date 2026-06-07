@@ -97,6 +97,18 @@ parameters:
 			path: app/Modules/Admin/routes.php
 
 		-
+			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Modules/ApiKeys/Repositories/ApiKeyRepository.php
+
+		-
+			message: '#^Variable \$router might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: app/Modules/ApiKeys/routes.php
+
+		-
 			message: '#^Method App\\Modules\\Auth\\Repositories\\AuthRepository\:\:create\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1

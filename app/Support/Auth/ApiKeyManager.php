@@ -14,7 +14,7 @@ use DateTimeInterface;
  *
  * El token en claro se muestra una sola vez; en DB viven `prefix` + `hash`.
  */
-final class ApiKeyManager
+class ApiKeyManager
 {
     public const TOKEN_PREFIX = 'mk_';
 

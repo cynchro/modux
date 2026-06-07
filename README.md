@@ -765,6 +765,21 @@ Authorization: Bearer mk_live_<id>_<secret>     # or: X-Api-Key: mk_live_...
 
 Keys are issued with `App\Support\Auth\ApiKeyManager::issue($tenantId, $name, $scopes)`,
 which returns the token **once** (only `prefix` + a SHA-256 `hash` are stored).
+
+Tenants manage their own keys through the built-in `ApiKeys` module (CRUD):
+
+```
+POST   /api-keys          { "name": "...", "scopes": ["clientes.read"] }  → 201, token shown once
+GET    /api-keys                                                          → list (never exposes hash)
+GET    /api-keys/{id}                                                     → one key's metadata
+DELETE /api-keys/{id}                                                     → revoke
+```
+
+These routes require `AuthMiddleware + TenantMiddleware + ScopeMiddleware:apikeys.manage`,
+so app users (scope `*`) manage keys transparently, while an API key can only
+administer others if explicitly granted `apikeys.manage` (prevents privilege
+escalation). Every operation is scoped to the caller's tenant.
+
 The key carries its tenant and a list of **scopes**; guard against them per route
 with the parametrized middleware:
 
@@ -984,7 +999,7 @@ return new class {
 ## Testing
 
 ```bash
-composer test      # PHPUnit (176 tests)
+composer test      # PHPUnit (183 tests)
 composer lint      # phpcs PSR-12
 composer analyse   # phpstan level 6 (PHPStan 2.x)
 ```
