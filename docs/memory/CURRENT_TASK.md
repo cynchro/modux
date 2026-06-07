@@ -37,10 +37,9 @@ División acordada:
 - ⏭️ **Fase 5 (SIGUIENTE)** — primer **módulo opcional**: `cynchro/modux-billing` (core
   agnóstico de pasarela). Tablas `plans`, `plan_entitlements`, `subscriptions`;
   `PaymentGatewayInterface`. Al activar/renovar un plan **escribe `tenant_entitlements`**
-  (incl. `period_start/period_end`), que el base ya lee. Vive fuera del chasis, estilo
-  `modux-ia` (en `../modulos/`, publicable en Packagist). **Decisión a tomar con el
-  usuario**: ¿se crea como paquete separado en `../modulos/billing` o se prototipa dentro
-  del repo? (`modux-ia` vive en `../modulos/ia`).
+  (incl. `period_start/period_end`), que el base ya lee. **Decisión cerrada: paquete
+  separado en `../modulos/billing`** (como `modux-ia` en `../modulos/ia`), publicable en
+  Packagist.
 - ⬜ Fase 6 — adaptadores `-stripe` / `-mercadopago`. Usan el `WebhookVerifier` (Fase 2).
 - ⬜ Fase 7 — opcional `cynchro/modux-oauth` (authorization server).
 
@@ -71,15 +70,12 @@ existentes → tests unitarios → **batería completa** (`composer test/analyse
 **validación e2e con Docker + MySQL real** → actualizar README + ADR → commit con mensaje
 detallado. El pre-push hook bloquea push si algo falla.
 
-## Bloqueos / pendientes (no detienen la Fase 2)
+## Bloqueos / pendientes
 
-- **Acción del usuario — rotar la Groq API key**: estuvo commiteada en `backend/.env`.
-  Se purgó del historial con `git filter-repo` y **nunca llegó a GitHub** (push bloqueado
-  por Push Protection y luego historial reescrito), pero estuvo en disco en claro →
-  conviene rotarla en el panel de Groq. El valor real no se vuelve a anotar en git.
-- **3 commits locales sin pushear** (`origin/main` = `8b3678c`, ya verificado):
-  `86fc12f` (ADR 0001), `7bae294` (Fase 1), `69ad4aa` (Fase 1.b). El push de tooling
-  (`8b3678c`) ya está en remoto. El usuario decide cuándo pushear el resto.
+- **Acción del usuario — rotar la Groq API key**: estuvo commiteada en `backend/.env`
+  (y una vez en este archivo). Se purgó del historial con `git filter-repo` y **nunca
+  llegó a GitHub** → conviene rotarla en el panel de Groq. El valor real no se anota en git.
+- **Todo pusheado**: `origin/main` al día (Fases 1–4 + ADR + memoria). 0 commits pendientes.
 - **Deuda preexistente no tocada**: `Cliente::create()`/`update()` son stubs
   (`RuntimeException('not implemented yet')`) — vienen así del scaffolding, fuera del
   alcance actual.
