@@ -747,7 +747,35 @@ GET /any-protected-route
 Authorization: Bearer <access_token>
 ```
 
-`AuthMiddleware` decodes the JWT, verifies the token exists in the DB (revocation check), and calls `$request->setUser($payload)`. Use `$request->user()` in controllers and services.
+`AuthMiddleware` resolves the request through **guards** (JWT first, then API
+key) and produces a unified `Principal`. For backward compatibility it still
+calls `$request->setUser($payload)`, so `$request->user()`,
+`TenantMiddleware` and `PermissionMiddleware` work unchanged. Use
+`$request->principal()` to read the auth type, tenant and scopes.
+
+### API keys (third-party auth)
+
+For server-to-server access by external developers, the same protected routes
+accept an **API key** instead of a user JWT — no code change on the route:
+
+```
+GET /any-protected-route
+Authorization: Bearer mk_live_<id>_<secret>     # or: X-Api-Key: mk_live_...
+```
+
+Keys are issued with `App\Support\Auth\ApiKeyManager::issue($tenantId, $name, $scopes)`,
+which returns the token **once** (only `prefix` + a SHA-256 `hash` are stored).
+The key carries its tenant and a list of **scopes**; guard against them per route
+with the parametrized middleware:
+
+```php
+$router->get('/clientes', [ClienteController::class, 'index'],
+    [AuthMiddleware::class, TenantMiddleware::class, 'App\Http\Middleware\ScopeMiddleware:clientes.read']);
+```
+
+Scopes (what a credential may touch) are orthogonal to RBAC permissions (what a
+user role may do) and to tenant entitlements (what a tenant has) — see
+`docs/adr/0001-saas-identity-entitlements-billing.md`.
 
 ---
 
@@ -956,7 +984,7 @@ return new class {
 ## Testing
 
 ```bash
-composer test      # PHPUnit (152 tests)
+composer test      # PHPUnit (176 tests)
 composer lint      # phpcs PSR-12
 composer analyse   # phpstan level 6 (PHPStan 2.x)
 ```

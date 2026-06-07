@@ -14,6 +14,7 @@ class Request
     private array $routeParams = [];
     private ?array $resolvedUser = null;
     private ?string $resolvedTenantId = null;
+    private ?\App\Support\Auth\Principal $resolvedPrincipal = null;
 
     private static ?string $testInputStream = null;
 
@@ -143,6 +144,16 @@ class Request
     public function tenantId(): ?string
     {
         return $this->resolvedTenantId;
+    }
+
+    public function setPrincipal(\App\Support\Auth\Principal $principal): void
+    {
+        $this->resolvedPrincipal = $principal;
+    }
+
+    public function principal(): ?\App\Support\Auth\Principal
+    {
+        return $this->resolvedPrincipal;
     }
 
     /** @param list<string> $keys

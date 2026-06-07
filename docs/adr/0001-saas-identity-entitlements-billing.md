@@ -363,15 +363,15 @@ Status codes fijados:
 
 ## Orden de implementación (dependencias primero)
 
-| Fase | Entregable | Capa | Desbloquea |
-|---|---|---|---|
-| 1 | Guards + `Principal` + `ApiKeyMiddleware` + `ScopeMiddleware` | base | API para terceros |
-| 2 | `WebhookVerifier` | base | pagos seguros, integraciones |
-| 3 | `tenant_entitlements` + `EntitlementResolver`/`Set` + `EntitlementMiddleware` | base | gating del SaaS |
-| 4 | `usage_events` + `UsageRecorder` + `QuotaMiddleware` + `entitlements:roll-periods` | base | metering |
-| 5 | `cynchro/modux-billing` core + `plan_entitlements` → escribe entitlements | módulo | planes |
-| 6 | `-stripe` / `-mercadopago` | módulos | cobro real |
-| 7 | `cynchro/modux-oauth` (opcional) | módulo | OAuth server |
+| Fase | Entregable | Capa | Desbloquea | Estado |
+|---|---|---|---|---|
+| 1 | Guards + `Principal` + `ApiKeyManager`/`ApiKeyGuard` + `ScopeMiddleware` | base | API para terceros | ✅ implementada |
+| 2 | `WebhookVerifier` | base | pagos seguros, integraciones | pendiente |
+| 3 | `tenant_entitlements` + `EntitlementResolver`/`Set` + `EntitlementMiddleware` | base | gating del SaaS | pendiente |
+| 4 | `usage_events` + `UsageRecorder` + `QuotaMiddleware` + `entitlements:roll-periods` | base | metering | pendiente |
+| 5 | `cynchro/modux-billing` core + `plan_entitlements` → escribe entitlements | módulo | planes | pendiente |
+| 6 | `-stripe` / `-mercadopago` | módulos | cobro real | pendiente |
+| 7 | `cynchro/modux-oauth` (opcional) | módulo | OAuth server | pendiente |
 
 Fases 1–4 son el **base** y prerequisito; 5–7 son módulos. Cada fase del base
 entra con migración versionada + tests y debe pasar el quality gate
