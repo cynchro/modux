@@ -958,8 +958,24 @@ return new class {
 ```bash
 composer test      # PHPUnit (152 tests)
 composer lint      # phpcs PSR-12
-composer analyse   # phpstan level 6
+composer analyse   # phpstan level 6 (PHPStan 2.x)
 ```
+
+### Quality gate — don't push a broken base
+
+This is a versioned framework that others depend on, so the same checks run in three places:
+
+- **Local pre-push hook** (`.githooks/pre-push`) — blocks `git push` unless `composer validate`,
+  lint, static analysis and tests all pass. Enable it once per clone:
+
+  ```bash
+  git config core.hooksPath .githooks
+  ```
+
+  Bypass only in an emergency with `git push --no-verify`.
+
+- **CI** (`.github/workflows/ci.yml`) — runs the same gate plus a Docker image build on every
+  push and PR to `main`.
 
 ### Unit tests — mock repositories, no DB
 

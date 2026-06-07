@@ -7,7 +7,6 @@ class Response
     private int $status  = 200;
     private array $headers = ['Content-Type' => 'application/json; charset=utf-8'];
     private ?array $body    = null;
-    private ?string $rawBody = null;
 
     public function withStatus(int $status): static
     {
@@ -75,9 +74,7 @@ class Response
             header("{$name}: {$value}");
         }
 
-        if ($this->rawBody !== null) {
-            echo $this->rawBody;
-        } elseif ($this->body !== null) {
+        if ($this->body !== null) {
             $encoded = json_encode($this->body, JSON_UNESCAPED_UNICODE);
             echo $encoded !== false
                 ? $encoded
