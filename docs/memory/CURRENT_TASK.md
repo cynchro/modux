@@ -34,14 +34,26 @@ División acordada:
   usa `remaining()`; 402 si no tiene feature, 429 + `Retry-After` si agotada);
   `QuotaExceededException`; `Handler` aplica el header `Retry-After`; comando CLI
   `entitlements:roll-periods` (red de seguridad para ciclos vencidos).
-- ⏭️ **Fase 5 (SIGUIENTE)** — primer **módulo opcional**: `cynchro/modux-billing` (core
-  agnóstico de pasarela). Tablas `plans`, `plan_entitlements`, `subscriptions`;
-  `PaymentGatewayInterface`. Al activar/renovar un plan **escribe `tenant_entitlements`**
-  (incl. `period_start/period_end`), que el base ya lee. **Decisión cerrada: paquete
-  separado en `../modulos/billing`** (como `modux-ia` en `../modulos/ia`), publicable en
-  Packagist.
-- ⬜ Fase 6 — adaptadores `-stripe` / `-mercadopago`. Usan el `WebhookVerifier` (Fase 2).
+- ✅ **Fase 5** — primer **módulo opcional**: `cynchro/modux-billing` (core agnóstico de
+  pasarela), **paquete separado en `../modulos/billing`** (repo propio, commit `f6fb4bb`,
+  namespace `Cynchro\Billing`). `Schema` (plans/plan_entitlements/subscriptions); models
+  Plan/PlanEntitlement/Subscription; `PaymentGatewayInterface` + `EntitlementWriterInterface`;
+  `BillingManager` (`subscribe()`, `handleEvent()` renew/cancel/past_due);
+  `TenantEntitlementWriter` (única costura billing→base: escribe `tenant_entitlements`).
+  9 tests + e2e contra MySQL real junto al base (subscribe escribe → base lee → cancel
+  limpia). El framework base **no** lo requiere (opcional, como `modux-ia`).
+- ⏭️ **Fase 6 (SIGUIENTE)** — adaptadores de pasarela como **paquetes separados**:
+  `cynchro/modux-billing-stripe` y `cynchro/modux-billing-mercadopago`. Implementan
+  `Cynchro\Billing\Contracts\PaymentGatewayInterface` (createCheckout/parseWebhook/cancel).
+  Verifican el webhook con el `WebhookVerifier` del base (Fase 2) antes de
+  `BillingManager::handleEvent()`. Necesitan los SDKs reales (stripe-php, mercadopago sdk).
 - ⬜ Fase 7 — opcional `cynchro/modux-oauth` (authorization server).
+
+### Nota de integración (pendiente, cuando se quiera una app que use billing)
+El ADR mencionaba un `app/Modules/Billing` que consume el SDK. Siguiendo el patrón de
+`modux-ia` (que se sacó del base), ese módulo de integración HTTP (endpoints de checkout
+y de webhook) **no va en el framework base** — pertenece a una instancia que instale
+billing. El paquete core ya está listo para consumirse.
 
 ## Problemas actuales
 

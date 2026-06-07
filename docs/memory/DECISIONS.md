@@ -214,6 +214,30 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   unitarios + e2e contra MySQL real (record/total/idempotencia, 200→429 + Retry-After,
   roll-periods avanzó `[ene–feb]` → `[jun–jul]`).
 
+### D15 — Fase 5: `cynchro/modux-billing` (paquete opcional separado)
+- **Qué**: primer módulo opcional de la capa comercial, como **paquete independiente** en
+  `../modulos/billing` (repo git propio, namespace `Cynchro\Billing`, mismo molde que
+  `modux-ia`). Incluye `Schema` (plans/plan_entitlements/subscriptions), models,
+  `PaymentGatewayInterface` (driver de pasarela), `EntitlementWriterInterface`,
+  `BillingManager` (`subscribe`/`handleEvent`) y `TenantEntitlementWriter`.
+- **Por qué**: separar lo comercial/pesado del chasis; el usuario eligió paquete separado
+  (no prototipo dentro del repo). El framework base **no** lo requiere.
+- **Decisiones de diseño**:
+  - **La costura es un único punto**: `TenantEntitlementWriter` escribe
+    `tenant_entitlements` (upsert por feature, con `source='billing:<gw>'` y período).
+    Billing escribe; el base solo lee. `cancel` hace `clear` por `source`.
+  - **Agnóstico de pasarela** (driver `PaymentGatewayInterface`) y **de framework**
+    (recibe un `PDO`). Los adaptadores Stripe/MP traducen sus webhooks a un `GatewayEvent`
+    normalizado que `BillingManager::handleEvent()` procesa.
+  - `EntitlementWriterInterface` desacopla la escritura (testeable; otra app podría
+    implementar su propio writer), aunque el default conoce el esquema del base.
+  - El módulo de integración HTTP (`app/Modules/Billing`) **no va en el base** (igual que
+    `app/Modules/IA`); pertenece a una instancia que instale billing.
+- **Tradeoff**: dos proyectos a mantener/versionar. El paquete conoce el esquema de
+  `tenant_entitlements` del base (acoplamiento aceptado: esa tabla es el contrato público).
+  Validación: 9 tests del paquete + e2e contra MySQL real junto al base (subscribe escribe
+  → `DbEntitlementResolver` lee allows/limit → cancel limpia).
+
 ---
 
 ## Convención de trabajo adoptada (meta-decisión)
