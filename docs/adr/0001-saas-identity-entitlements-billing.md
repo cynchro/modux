@@ -137,6 +137,17 @@ Header `X-Signature: t=<ts>,v1=<hmac>`; recomputa
 guarda el nonce en `CacheInterface` (ya existe) para descartar reenvíos. Sin
 tablas nuevas.
 
+> **Operación — el anti-replay exige un store compartido (D18).** El nonce vive
+> en `CacheInterface`, cuyo binding por defecto es `ApcuCache`. APCu es **por
+> proceso/host**: no se comparte entre instancias ni entre contenedores. En un
+> deploy horizontalmente escalado, un reenvío podría caer en otra instancia y no
+> ser detectado. Por eso el `WebhookVerifier` **falla cerrado** si el cache no es
+> operativo (`CacheInterface::available() === false`, p. ej. APCu deshabilitado
+> con `apc.enable_cli=0`): rechaza la firma en vez de aceptarla sin protección, y
+> `bootstrap/app.php` loguea un warning. **Para multi-instancia, vinculá
+> `CacheInterface` a un store compartido** (Redis/Memcached/DB) implementando la
+> interfaz; el esquema HMAC no cambia.
+
 ### 1.4 Entitlements (corazón del diseño)
 
 Tabla de entitlements **efectivos** por tenant (lo que el tenant tiene *ahora*,

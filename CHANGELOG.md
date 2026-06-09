@@ -1,0 +1,59 @@
+# Changelog
+
+Todos los cambios relevantes de este proyecto se documentan acá.
+
+El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y el
+versionado es [SemVer](https://semver.org/lang/es/). Las versiones hasta la
+`v1.2.0` están en los tags de git y el historial; este archivo arranca el
+registro formal a partir de los cambios siguientes.
+
+## [Unreleased]
+
+### ⚠ Cambios incompatibles (BREAKING)
+
+- **`App\Support\Contracts\CacheInterface` declara `available(): bool`.** Quien
+  tenga una implementación propia de la interfaz (p. ej. un cache Redis) debe
+  añadir el método. Las implementaciones del base (`ArrayCache`, `ApcuCache`) ya
+  lo traen. Por ser una adición a una interfaz pública, la próxima release que
+  incluya esto debería ser **major** (`v2.0.0`).
+
+### Añadido
+
+- **Red de Feature/integration tests contra MySQL real.** `FeatureTestCase`
+  completo (PDO compartido test↔app, esquema vía migraciones, transacción por
+  test con rollback, despacho por el Router real). 19 Feature tests: flujo de
+  auth, CRUD multi-tenant, aislamiento entre tenants, gating de entitlements
+  (402) y cuotas (429 + `Retry-After`), y API keys/scopes (incl. prevención de
+  escalada de privilegios). Se saltan con elegancia si no hay MySQL disponible.
+- **CI con base de datos real.** El job `quality` levanta un service `mysql:8.0`;
+  `composer test` ahora corre Unit + Feature contra DB real.
+- **`CacheInterface::available()`** — indica si el backend es operativo; las
+  features que dependen de estado compartido por seguridad lo consultan.
+- **Migración `0010_add_nombre_to_clientes`** — añade la columna de ejemplo
+  `nombre` al CRUD de scaffolding (idempotente, reversible).
+- **CRUD de ejemplo `clientes` funcional** — `create()`/`update()` reales (antes
+  lanzaban "not implemented"), validación y aislamiento por tenant.
+
+### Cambiado
+
+- **`WebhookVerifier` falla cerrado** cuando el cache anti-replay no es operativo
+  (rechaza en vez de aceptar reenvíos sin protección).
+- **`Container`** — `makeWith()` y `autowire()` unificados en un único `build()`
+  (sin cambios de API pública).
+- **README** partido en una landing breve + manual temático en `docs/`
+  (48 KB → 8 KB).
+- **PHPStan** — baseline vaciado (84 → 0); se desactivó la regla
+  `missingType.iterableValue` a nivel proyecto y se corrigieron los hallazgos
+  reales (`$router` con `@var`, `Response` `final`, comparación muerta).
+
+### Corregido / Seguridad
+
+- **Anti-replay de webhooks**: cerrada la degradación silenciosa a inseguro
+  cuando APCu no estaba operativo (multi-instancia / `apc.enable_cli=0`). El ADR
+  0001 §1.3 documenta el requisito de un store compartido. Aviso al bootear.
+- **Inmutabilidad de migraciones**: se revirtió la edición in-situ de `0004` y se
+  trasladó el cambio a la migración nueva `0010`.
+
+## Versiones previas
+
+Hasta `v1.2.0`, ver los tags de git (`git tag -l`) y el historial de commits.

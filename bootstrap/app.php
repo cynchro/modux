@@ -51,7 +51,20 @@ $app->singleton(App\Support\JobDispatcher::class, fn ($c) =>
 
 $app->singleton(
     App\Support\Contracts\CacheInterface::class,
-    fn () => new App\Support\Cache\ApcuCache()
+    function ($c) {
+        $cache = new App\Support\Cache\ApcuCache();
+        if (!$cache->available()) {
+            // El cache compartido es prerequisito de la protección anti-replay
+            // de webhooks (WebhookVerifier falla cerrado sin él). Avisamos fuerte
+            // para que no pase inadvertido en producción.
+            $c->get(App\Support\Logger::class)->warning(
+                'CacheInterface resolved to APCu but it is not enabled '
+                . '(apcu_enabled() === false). Webhook anti-replay will reject '
+                . 'all signatures until a working shared cache is configured.'
+            );
+        }
+        return $cache;
+    }
 );
 
 $app->singleton(

@@ -10,6 +10,7 @@ if (!class_exists(\Cynchro\Billing\BillingManager::class)) {
 }
 
 // Checkout: requiere usuario autenticado y tenant.
+/** @var \App\Support\Router $router (inyectado por bootstrap/app.php al cargar las rutas) */
 $router->group([AuthMiddleware::class, TenantMiddleware::class], function ($router) {
     $router->post('/billing/checkout', [BillingController::class, 'checkout']);
 });

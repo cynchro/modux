@@ -8,6 +8,7 @@ use App\Http\Middleware\ScopeMiddleware;
 // Gestión de las API keys del tenant. Protegida por el scope 'apikeys.manage':
 // los usuarios de la app (scope '*') pasan transparentemente; una API key sólo
 // puede administrar otras si se le concedió ese scope explícitamente.
+/** @var \App\Support\Router $router (inyectado por bootstrap/app.php al cargar las rutas) */
 $router->group(
     [AuthMiddleware::class, TenantMiddleware::class, ScopeMiddleware::class . ':apikeys.manage'],
     function ($router) {

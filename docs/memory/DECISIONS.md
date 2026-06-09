@@ -281,6 +281,158 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   (GatewayFactory + BillingController firma ok/mal) + e2e contra MySQL real (webhook Stripe
   firmado escribió `tenant_entitlements`; firma inválida 401).
 
+### D18 — Anti-replay de webhooks: fail-closed cuando el cache no es operativo
+- **Qué**: el `WebhookVerifier` usaba `CacheInterface` para el anti-replay, pero `ApcuCache`
+  hace **no-op silencioso** si APCu no está habilitado (`apcu_enabled() === false`, p. ej.
+  `apc.enable_cli=0`, extensión ausente, o multi-instancia donde APCu no se comparte). Con
+  un cache inerte, `has()` siempre devuelve `false` → toda firma válida pasaba el chequeo
+  de replay **sin protección y sin error**: degradación silenciosa a inseguro.
+- **Fix (mínimo, sin nueva dependencia)**:
+  - Se añadió `available(): bool` a `CacheInterface` (2 implementadores: `ArrayCache`→`true`,
+    `ApcuCache`→`function_exists('apcu_enabled') && apcu_enabled()`).
+  - `WebhookVerifier::verify()` ahora **falla cerrado**: si `!cache->available()` retorna
+    `false` antes del anti-replay (mejor rechazar que aceptar reenvíos).
+  - `bootstrap/app.php` loguea un **warning** al resolver el cache si APCu no está operativo,
+    para que el operador lo vea (ruidoso) en vez de solo el rechazo del webhook.
+- **Por qué**: era el único hallazgo de la auditoría que es *seguridad*, no prolijidad. "Loud
+  failure > silent insecurity".
+- **Tradeoff**: en un deploy sin APCu (o sin store compartido), los webhooks se rechazan
+  hasta configurar un cache real → comportamiento visible y correcto. En el contenedor APCu
+  está habilitado, así que el happy-path (webhook firmado → 200) **no cambia**.
+- **Validación**: test nuevo `test_fails_closed_when_replay_store_unavailable` (cache inerte
+  anónimo + firma válida → `false`). Batería completa verde: 221 tests / 326 assertions,
+  PHPStan 0, PHPCS limpio.
+- **Pendiente documental**: el ADR 0001 debería anotar que el anti-replay requiere un store
+  **compartido** (Redis/DB) en multi-instancia; APCu es por-proceso.
+
+### D19 — DRY del `Container`: `makeWith` + `autowire` → `build()` privado
+- **Qué**: `makeWith()` y `autowire()` eran ~idénticos (autowiring por reflexión); el primero
+  solo añadía inyección posicional de escalares. Se unificaron en un único `build(string
+  $class, array $scalars = [])`; `make()`/`makeWith()`/`get()` delegan en él. −35 líneas, un
+  solo punto de resolución.
+- **Por qué**: era duplicación con riesgo de divergencia futura; el #2 de la auditoría
+  (limpieza que *baja* complejidad, no la sube).
+- **Tradeoff/nota**: se cambió `isset($scalars[$i])` → `array_key_exists()` (acepta escalares
+  `null` explícitos; los callers actuales solo pasan strings, sin cambio observable). Sin
+  cambios de API pública. Batería completa verde (221 tests / PHPStan 0 / PHPCS).
+
+### D20 — Módulo `Cliente`: de stub roto a ejemplo de scaffolding funcional
+- **Qué**: `Cliente` es el ejemplo de "CRUD multi-tenant" del framework, pero estaba a
+  medias: tabla `clientes` con solo `id`+`tenant_id`, validación vacía y `create()/update()`
+  lanzando `RuntimeException('not implemented yet')` (500 en producción para un módulo vivo
+  y ruteado).
+- **Decisión del usuario (#3 de la auditoría, opción "ejemplo completo")**: convertirlo en
+  un CRUD que corre end-to-end, no quitarlo del base. Cambios:
+  - Columna demo `nombre VARCHAR(255) NOT NULL` (a reemplazar por columnas de dominio).
+    *(Nota: inicialmente se editó la migración `0004` en sitio; corregido en D23 vía una
+    migración nueva `0010` para respetar la inmutabilidad de migraciones publicadas.)*
+  - `CreateClienteRequest`/`UpdateClienteRequest`: regla `'nombre' =>
+    'required|string|min:2|max:255'` (PUT = reemplazo).
+  - `ClienteRepository::create()` → `INSERT nombre, tenant_id` + `findById(lastInsertId)`;
+    `update()` → `UPDATE nombre WHERE id AND tenant_id` (return `rowCount() > 0`).
+- **Por qué**: un framework-plantilla debe traer un ejemplo *que funcione* (request →
+  validación → service → repo → DB), que el adoptante renombra/extiende, en vez de un módulo
+  que tira 500. Cierra la deuda preexistente de scaffolding documentada en CURRENT_TASK.
+- **Validación**: batería completa verde (221 tests / PHPStan 0 / PHPCS) + **e2e contra
+  MySQL 8 real** (contenedor descartable aislado, sin tocar el stack del usuario): migración
+  crea la tabla, `create`→`findById` OK, `update` con tenant correcto afecta 1 fila, con
+  tenant ajeno 0 filas (aislamiento row-level verificado). `ClienteServiceTest` mockea el
+  repo → intacto.
+### D23 — Inmutabilidad de migraciones: revertir `0004`, añadir `0010` (anti-replay + caveat ADR)
+- **Qué**: D20 había editado la migración **ya publicada** `0004_add_tenant_to_clientes`
+  para meter la columna `nombre`, lo que rompe la inmutabilidad de migraciones (una DB ya
+  migrada no la re-ejecuta → necesitaría `ALTER` manual). Corregido:
+  - `0004` revertida a su forma original publicada.
+  - Nueva migración `0010_add_nombre_to_clientes` (`ALTER TABLE clientes ADD/DROP COLUMN
+    nombre`, idempotente vía `information_schema`, `down()` reversible). El runner trackea
+    migraciones por filename en la tabla `migrations` → corre una sola vez en nueva o
+    existente; ambas convergen al mismo esquema.
+- **Por qué**: profesionalismo/solidez — las migraciones publicadas no se editan, se
+  suceden. Cierra el pendiente "ALTER manual" de D20.
+- **Validación**: e2e contra MySQL 8 real (descartable): 0004 sin `nombre` → 0010 lo agrega
+  → guard idempotente → CRUD + aislamiento por tenant → `down()` revierte. Batería verde
+  (221 tests / PHPStan 0 / PHPCS).
+- **Doc**: ADR 0001 §1.3 ampliado con el caveat operativo de D18 — el anti-replay exige un
+  **store compartido** (APCu es por-proceso); en multi-instancia, vincular `CacheInterface`
+  a Redis/DB. El verifier ya falla cerrado si el cache no opera.
+
+### D21 — Vaciar el baseline de PHPStan (84 → 0)
+- **Qué**: el `phpstan-baseline.neon` tenía 84 entradas que escondían cualquier regresión
+  nueva. Composición real: ~77 `missingType.iterableValue` (faltan generics de array), 7
+  `variable.undefined` del `$router` global en `routes.php`, 3 `new static()` unsafe en
+  `Response`, 1 comparación estricta muerta en `ApiKeyRepository`.
+- **Decisión del usuario (#4 de la auditoría)**: vaciar el baseline. Para los 77 generics,
+  **desactivar la regla** `missingType.iterableValue` a nivel proyecto (1 línea en
+  `phpstan.neon`) en vez de tipar 77 sitios — coherente con F2 (PDO crudo, filas como arrays
+  de `mixed`; el generic no aporta seguridad real). Los genuinos se arreglaron en código:
+  - `$router`: `/** @var \App\Support\Router $router */` en los 7 `routes.php` (elimina el
+    falso positivo de raíz y da autocompletado al IDE).
+  - `Response`: marcada `final` → `new static()` deja de ser unsafe (nada la extiende).
+  - `ApiKeyRepository::present()`: `isset(...) && $row['scopes'] !== null` → `isset(...)`
+    (el `!== null` era siempre true; `isset` ya excluye null). Cleanup real.
+  - Se borró `phpstan-baseline.neon` y su `includes` en `phpstan.neon`.
+- **Por qué**: un baseline gordo oculta regresiones; ahora cualquier aviso nuevo de nivel 6
+  (variables sin definir, código muerto, errores de tipo) salta de inmediato.
+- **Tradeoff**: código nuevo con arrays sin tipar tampoco se marca (se asume como stance del
+  framework). El resto del nivel 6 sigue activo.
+- **Validación**: `composer analyse` 0 errores **sin baseline**; 221 tests / PHPStan 0 /
+  PHPCS limpio. Sin referencias colgadas al baseline en CI/hooks/README.
+
+### D22 — Partir el README (48 KB → 8 KB) en `docs/`
+- **Qué**: el `README.md` era un manual de 1450 líneas / 48 KB, incoherente con un framework
+  que se vende como liviano. Se dejó como **landing/quickstart** (intro, at-a-glance,
+  requisitos, instalación, quick start, estructura, índice de docs, "Why not Laravel?",
+  licencia) y se movió el manual a `docs/` en 7 archivos temáticos contiguos:
+  `cli.md`, `modules.md`, `http.md`, `auth-and-tenancy.md`, `infrastructure.md`,
+  `platform.md`, `optional-modules.md`. Cada uno con título + back-link al README.
+- **Cómo**: extracción por **rangos de línea exactos** desde un backup (sin retipear), para
+  mover contenido byte-fiel. Verificado: 1266 líneas movidas == rango original 163–1428
+  (cero pérdida); sin enlaces de ancla internos rotos (no había ninguno).
+- **Por qué**: la landing ahora se lee en segundos y el detalle queda navegable por tema.
+  Puro cosmético/DX, sin tocar código (#5 de la auditoría, el de menor prioridad).
+- **Resultado**: README 1450→197 líneas (48578→8246 bytes). Sin impacto en CI/tests/lint
+  (markdown). Cierra la auditoría liviana (#1–#5).
+
+### D24 — Red de Feature/integration tests contra MySQL real + CI
+- **Qué**: el framework tenía `FeatureTestCase` pero **0 Feature tests** y el CI no levantaba
+  DB → ninguna ruta de SQL/migraciones/pipeline/auth/gating estaba cubierta automáticamente
+  (toda la validación era e2e manual con Docker). Se construyó la red completa:
+  - **Harness** (`FeatureTestCase`): PDO compartido entre test y app (mismo singleton del
+    container); esquema creado una vez por proceso (drop-all + todas las migraciones);
+    **transacción por test con rollback** en tearDown (aislamiento sin re-migrar); bindings
+    de servicios (DB/Cache=ArrayCache/Entitlement/Usage/Webhook/EventDispatcher/Router);
+    `request()` despacha por el Router real (corren los middlewares de ruta) y mapea
+    `AppException`→status/headers como el Handler. Helpers: `actingAsUser` (tenant+usuario+
+    JWT guardado en `usuarios.token`), `seedTenant`, `grantFlag/grantQuota/recordUsage`,
+    `registerRoute` (rutas ad-hoc para gating).
+  - **Tests** (19): `AuthFlowTest` (login ok/credenciales inválidas/token revocado/sin token),
+    `ClienteCrudTest` (CRUD completo + validación 422 + 401), `TenantIsolationTest` (A no ve
+    ni alcanza datos de B), `GatingTest` (entitlement 402/200, quota 200 vs 429+Retry-After,
+    quota sin entitlement 402), `ApiKeysTest` (emisión/listado/revocación + key sin scope
+    `apikeys.manage` → 403, prevención de escalada). Fixture `PingController`.
+  - **CI**: service `mysql:8.0` (db `monolito_test`, root sin clave, health-check) en el job
+    `quality`; `composer test` ahora corre Unit+Feature contra DB real.
+- **Skip elegante**: si MySQL no está disponible (sin `pdo_mysql` o sin DB — p. ej. el
+  pre-push local del host), los Feature tests **se saltan** en vez de fallar (`markTestSkipped`
+  en setUp ante `PDOException`). El CI es el punto de enforcement de integración.
+- **Por qué**: es el mayor diferencial de "estable y sólido" — convierte la validación manual
+  en red de regresión automática. Pedido explícito del usuario.
+- **Validación**: host sin DB → 221 pass + 15 skip (verde, pre-push ok); con MySQL real
+  (php:8.3-cli + pdo_mysql, red Docker aislada) → **236 tests / 361 assertions** verdes
+  (221 unit + 15 feature). PHPStan 0, PHPCS limpio (158 archivos, incluye los tests nuevos).
+
+### D25 — CHANGELOG + versionado SemVer (release pendiente)
+- **Qué**: se creó `CHANGELOG.md` (Keep a Changelog) con la sección `[Unreleased]` que
+  documenta toda la tanda (D18–D24). El proyecto ya estaba en `v1.2.0` (tags de git), no en
+  0.x.
+- **Decisión SemVer (a confirmar el usuario antes de taggear)**: agregar `available()` a
+  `CacheInterface` es una adición a una interfaz pública → **breaking para implementadores**
+  propios → la release que lo incluya debería ser **major `v2.0.0`**. Marcado como BREAKING
+  en el CHANGELOG.
+- **Por qué NO se tagueó aún**: (a) el número de versión con un cambio breaking amerita el OK
+  del usuario; (b) un tag debe apuntar a `main` tras el merge del PR, no a la rama. Queda como
+  paso post-merge.
+
 ---
 
 ## Convención de trabajo adoptada (meta-decisión)

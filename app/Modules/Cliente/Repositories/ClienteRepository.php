@@ -37,27 +37,29 @@ class ClienteRepository
      * @param  array<string, mixed> $data
      * @return array<string, mixed>
      *
-     * TODO: replace with your actual columns:
-     *   $stmt = $this->pdo->prepare('INSERT INTO clientes (col1, col2, tenant_id) VALUES (?, ?, ?)');
-     *   $stmt->execute([$data['col1'], $data['col2'], $tenantId]);
-     *   return $this->findById((int) $this->pdo->lastInsertId(), $tenantId);
+     * Scaffolding: inserta la columna de ejemplo `nombre`. Para tu dominio,
+     * amplía las columnas aquí, en la migración y en CreateClienteRequest.
      */
     public function create(array $data, string $tenantId): array
     {
-        throw new \RuntimeException('create() not implemented yet.');
+        $stmt = $this->pdo->prepare('INSERT INTO clientes (nombre, tenant_id) VALUES (?, ?)');
+        $stmt->execute([$data['nombre'], $tenantId]);
+
+        return $this->findById((int) $this->pdo->lastInsertId(), $tenantId);
     }
 
     /**
      * @param array<string, mixed> $data
      *
-     * TODO: replace with your actual columns:
-     *   $stmt = $this->pdo->prepare('UPDATE clientes SET col1 = ? WHERE id = ? AND tenant_id = ?');
-     *   $stmt->execute([$data['col1'], $id, $tenantId]);
-     *   return $stmt->rowCount() > 0;
+     * Scaffolding: actualiza la columna de ejemplo `nombre`, siempre filtrando
+     * por `tenant_id` (aislamiento row-level). Devuelve false si no hubo cambios.
      */
     public function update(int $id, array $data, string $tenantId): bool
     {
-        throw new \RuntimeException('update() not implemented yet.');
+        $stmt = $this->pdo->prepare('UPDATE clientes SET nombre = ? WHERE id = ? AND tenant_id = ?');
+        $stmt->execute([$data['nombre'], $id, $tenantId]);
+
+        return $stmt->rowCount() > 0;
     }
 
     public function delete(int $id, string $tenantId): bool
