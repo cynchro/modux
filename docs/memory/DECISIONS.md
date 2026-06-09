@@ -429,9 +429,9 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   `CacheInterface` es una adición a una interfaz pública → **breaking para implementadores**
   propios → la release que lo incluya debería ser **major `v2.0.0`**. Marcado como BREAKING
   en el CHANGELOG.
-- **Por qué NO se tagueó aún**: (a) el número de versión con un cambio breaking amerita el OK
-  del usuario; (b) un tag debe apuntar a `main` tras el merge del PR, no a la rama. Queda como
-  paso post-merge.
+- **Resuelto**: el usuario eligió **v2.0.0**. El CHANGELOG se cerró en la rama
+  (`[Unreleased]` → `[2.0.0] - 2026-06-09`). **Falta el tag** (`git tag -a v2.0.0`), que se
+  crea sobre `main` **tras el merge del PR** — no sobre la rama.
 
 ---
 

@@ -7,15 +7,15 @@ versionado es [SemVer](https://semver.org/lang/es/). Las versiones hasta la
 `v1.2.0` están en los tags de git y el historial; este archivo arranca el
 registro formal a partir de los cambios siguientes.
 
-## [Unreleased]
+## [2.0.0] - 2026-06-09
 
 ### ⚠ Cambios incompatibles (BREAKING)
 
 - **`App\Support\Contracts\CacheInterface` declara `available(): bool`.** Quien
   tenga una implementación propia de la interfaz (p. ej. un cache Redis) debe
   añadir el método. Las implementaciones del base (`ArrayCache`, `ApcuCache`) ya
-  lo traen. Por ser una adición a una interfaz pública, la próxima release que
-  incluya esto debería ser **major** (`v2.0.0`).
+  lo traen. Por ser una adición a una interfaz pública, esta release es
+  **major** (`v2.0.0`).
 
 ### Añadido
 
