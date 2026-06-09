@@ -5,8 +5,11 @@ return new class {
     {
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS clientes (
-                id        INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                tenant_id CHAR(36) NOT NULL,
+                id        INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                tenant_id CHAR(36)     NOT NULL,
+                -- Columna de ejemplo: este módulo es el scaffolding de un CRUD
+                -- multi-tenant. Añade aquí las columnas reales de tu dominio.
+                nombre    VARCHAR(255) NOT NULL,
                 CONSTRAINT fk_clientes_tenant
                     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
                 INDEX idx_clientes_tenant (tenant_id)

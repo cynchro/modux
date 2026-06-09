@@ -10,7 +10,8 @@ class CreateClienteRequest extends FormRequest
     protected function rules(): array
     {
         return [
-            // 'campo' => 'required|min:2|max:255',
+            // Regla de ejemplo (scaffolding). Añade aquí los campos de tu dominio.
+            'nombre' => 'required|string|min:2|max:255',
         ];
     }
 }

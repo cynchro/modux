@@ -10,7 +10,8 @@ class UpdateClienteRequest extends FormRequest
     protected function rules(): array
     {
         return [
-            // 'campo' => 'required|min:2|max:255',
+            // PUT reemplaza el recurso (scaffolding). Refleja aquí tus columnas.
+            'nombre' => 'required|string|min:2|max:255',
         ];
     }
 }
