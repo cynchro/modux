@@ -9,6 +9,12 @@ registro formal a partir de los cambios siguientes.
 
 ## [Unreleased]
 
+### Añadido
+
+- **`scripts/build-wiki.sh`** — regenera y publica la wiki de GitHub a partir de
+  `README.md` + `docs/*.md` (espejo idempotente, con `--no-push` para revisar). Mantiene
+  la wiki en sync con la doc del repo sin trabajo manual.
+
 ### Documentación
 
 - Sincronizados los docs de usuario con el código de la v2.x: la sección de Feature
