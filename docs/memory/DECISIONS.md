@@ -281,6 +281,103 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   (GatewayFactory + BillingController firma ok/mal) + e2e contra MySQL real (webhook Stripe
   firmado escribió `tenant_entitlements`; firma inválida 401).
 
+### D18 — Anti-replay de webhooks: fail-closed cuando el cache no es operativo
+- **Qué**: el `WebhookVerifier` usaba `CacheInterface` para el anti-replay, pero `ApcuCache`
+  hace **no-op silencioso** si APCu no está habilitado (`apcu_enabled() === false`, p. ej.
+  `apc.enable_cli=0`, extensión ausente, o multi-instancia donde APCu no se comparte). Con
+  un cache inerte, `has()` siempre devuelve `false` → toda firma válida pasaba el chequeo
+  de replay **sin protección y sin error**: degradación silenciosa a inseguro.
+- **Fix (mínimo, sin nueva dependencia)**:
+  - Se añadió `available(): bool` a `CacheInterface` (2 implementadores: `ArrayCache`→`true`,
+    `ApcuCache`→`function_exists('apcu_enabled') && apcu_enabled()`).
+  - `WebhookVerifier::verify()` ahora **falla cerrado**: si `!cache->available()` retorna
+    `false` antes del anti-replay (mejor rechazar que aceptar reenvíos).
+  - `bootstrap/app.php` loguea un **warning** al resolver el cache si APCu no está operativo,
+    para que el operador lo vea (ruidoso) en vez de solo el rechazo del webhook.
+- **Por qué**: era el único hallazgo de la auditoría que es *seguridad*, no prolijidad. "Loud
+  failure > silent insecurity".
+- **Tradeoff**: en un deploy sin APCu (o sin store compartido), los webhooks se rechazan
+  hasta configurar un cache real → comportamiento visible y correcto. En el contenedor APCu
+  está habilitado, así que el happy-path (webhook firmado → 200) **no cambia**.
+- **Validación**: test nuevo `test_fails_closed_when_replay_store_unavailable` (cache inerte
+  anónimo + firma válida → `false`). Batería completa verde: 221 tests / 326 assertions,
+  PHPStan 0, PHPCS limpio.
+- **Pendiente documental**: el ADR 0001 debería anotar que el anti-replay requiere un store
+  **compartido** (Redis/DB) en multi-instancia; APCu es por-proceso.
+
+### D19 — DRY del `Container`: `makeWith` + `autowire` → `build()` privado
+- **Qué**: `makeWith()` y `autowire()` eran ~idénticos (autowiring por reflexión); el primero
+  solo añadía inyección posicional de escalares. Se unificaron en un único `build(string
+  $class, array $scalars = [])`; `make()`/`makeWith()`/`get()` delegan en él. −35 líneas, un
+  solo punto de resolución.
+- **Por qué**: era duplicación con riesgo de divergencia futura; el #2 de la auditoría
+  (limpieza que *baja* complejidad, no la sube).
+- **Tradeoff/nota**: se cambió `isset($scalars[$i])` → `array_key_exists()` (acepta escalares
+  `null` explícitos; los callers actuales solo pasan strings, sin cambio observable). Sin
+  cambios de API pública. Batería completa verde (221 tests / PHPStan 0 / PHPCS).
+
+### D20 — Módulo `Cliente`: de stub roto a ejemplo de scaffolding funcional
+- **Qué**: `Cliente` es el ejemplo de "CRUD multi-tenant" del framework, pero estaba a
+  medias: tabla `clientes` con solo `id`+`tenant_id`, validación vacía y `create()/update()`
+  lanzando `RuntimeException('not implemented yet')` (500 en producción para un módulo vivo
+  y ruteado).
+- **Decisión del usuario (#3 de la auditoría, opción "ejemplo completo")**: convertirlo en
+  un CRUD que corre end-to-end, no quitarlo del base. Cambios:
+  - Migración `0004`: + columna demo `nombre VARCHAR(255) NOT NULL` (comentada como ejemplo
+    a reemplazar por columnas de dominio).
+  - `CreateClienteRequest`/`UpdateClienteRequest`: regla `'nombre' =>
+    'required|string|min:2|max:255'` (PUT = reemplazo).
+  - `ClienteRepository::create()` → `INSERT nombre, tenant_id` + `findById(lastInsertId)`;
+    `update()` → `UPDATE nombre WHERE id AND tenant_id` (return `rowCount() > 0`).
+- **Por qué**: un framework-plantilla debe traer un ejemplo *que funcione* (request →
+  validación → service → repo → DB), que el adoptante renombra/extiende, en vez de un módulo
+  que tira 500. Cierra la deuda preexistente de scaffolding documentada en CURRENT_TASK.
+- **Validación**: batería completa verde (221 tests / PHPStan 0 / PHPCS) + **e2e contra
+  MySQL 8 real** (contenedor descartable aislado, sin tocar el stack del usuario): migración
+  crea la tabla, `create`→`findById` OK, `update` con tenant correcto afecta 1 fila, con
+  tenant ajeno 0 filas (aislamiento row-level verificado). `ClienteServiceTest` mockea el
+  repo → intacto.
+- **Nota**: la migración `0004` se editó en sitio (CREATE TABLE IF NOT EXISTS); en instalaciones
+  ya migradas la columna `nombre` requiere un `ALTER TABLE` manual. Para nuevas instancias
+  (caso del framework como plantilla) corre limpio con `php modux migrate`.
+
+### D21 — Vaciar el baseline de PHPStan (84 → 0)
+- **Qué**: el `phpstan-baseline.neon` tenía 84 entradas que escondían cualquier regresión
+  nueva. Composición real: ~77 `missingType.iterableValue` (faltan generics de array), 7
+  `variable.undefined` del `$router` global en `routes.php`, 3 `new static()` unsafe en
+  `Response`, 1 comparación estricta muerta en `ApiKeyRepository`.
+- **Decisión del usuario (#4 de la auditoría)**: vaciar el baseline. Para los 77 generics,
+  **desactivar la regla** `missingType.iterableValue` a nivel proyecto (1 línea en
+  `phpstan.neon`) en vez de tipar 77 sitios — coherente con F2 (PDO crudo, filas como arrays
+  de `mixed`; el generic no aporta seguridad real). Los genuinos se arreglaron en código:
+  - `$router`: `/** @var \App\Support\Router $router */` en los 7 `routes.php` (elimina el
+    falso positivo de raíz y da autocompletado al IDE).
+  - `Response`: marcada `final` → `new static()` deja de ser unsafe (nada la extiende).
+  - `ApiKeyRepository::present()`: `isset(...) && $row['scopes'] !== null` → `isset(...)`
+    (el `!== null` era siempre true; `isset` ya excluye null). Cleanup real.
+  - Se borró `phpstan-baseline.neon` y su `includes` en `phpstan.neon`.
+- **Por qué**: un baseline gordo oculta regresiones; ahora cualquier aviso nuevo de nivel 6
+  (variables sin definir, código muerto, errores de tipo) salta de inmediato.
+- **Tradeoff**: código nuevo con arrays sin tipar tampoco se marca (se asume como stance del
+  framework). El resto del nivel 6 sigue activo.
+- **Validación**: `composer analyse` 0 errores **sin baseline**; 221 tests / PHPStan 0 /
+  PHPCS limpio. Sin referencias colgadas al baseline en CI/hooks/README.
+
+### D22 — Partir el README (48 KB → 8 KB) en `docs/`
+- **Qué**: el `README.md` era un manual de 1450 líneas / 48 KB, incoherente con un framework
+  que se vende como liviano. Se dejó como **landing/quickstart** (intro, at-a-glance,
+  requisitos, instalación, quick start, estructura, índice de docs, "Why not Laravel?",
+  licencia) y se movió el manual a `docs/` en 7 archivos temáticos contiguos:
+  `cli.md`, `modules.md`, `http.md`, `auth-and-tenancy.md`, `infrastructure.md`,
+  `platform.md`, `optional-modules.md`. Cada uno con título + back-link al README.
+- **Cómo**: extracción por **rangos de línea exactos** desde un backup (sin retipear), para
+  mover contenido byte-fiel. Verificado: 1266 líneas movidas == rango original 163–1428
+  (cero pérdida); sin enlaces de ancla internos rotos (no había ninguno).
+- **Por qué**: la landing ahora se lee en segundos y el detalle queda navegable por tema.
+  Puro cosmético/DX, sin tocar código (#5 de la auditoría, el de menor prioridad).
+- **Resultado**: README 1450→197 líneas (48578→8246 bytes). Sin impacto en CI/tests/lint
+  (markdown). Cierra la auditoría liviana (#1–#5).
+
 ---
 
 ## Convención de trabajo adoptada (meta-decisión)

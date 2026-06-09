@@ -1,5 +1,30 @@
 # CURRENT_TASK.md
 
+## Última sesión (2026-06-09) — hardening anti-replay de webhooks
+
+Auditoría liviana del framework a pedido del usuario ("qué mejorar sin complejizar").
+Veredicto: la base está sólida y minimalista; se acordó **no** agregar arquitectura.
+Lista de remates identificada (ver abajo). Se ejecutó el **#1 (seguridad)**: el
+anti-replay degradaba en silencio a inseguro si el cache (APCu) no era operativo. Fix en
+`D18` (DECISIONS.md): `CacheInterface::available()`, `WebhookVerifier` falla cerrado,
+warning al bootear. 221 tests verdes / PHPStan 0 / PHPCS limpio. **Sin commitear aún.**
+
+También se ejecutó **#2** (DRY de `Container` → `build()`, `D19`) y **#3** (módulo `Cliente`:
+de stub roto a ejemplo de scaffolding funcional con columna demo `nombre`, `D20`; validado
+e2e contra MySQL real).
+
+**#4** (vaciar baseline PHPStan 84→0: regla `missingType.iterableValue` off + `$router`
+con `@var` + `Response` final + comparación muerta de `ApiKeyRepository`; `D21`) y **#5**
+(partir README 48 KB→8 KB en `docs/`, `D22`).
+
+**Auditoría liviana COMPLETA (#1–#5).** Todo con batería verde, sin commitear aún.
+
+Notas previas (ya superadas):
+#4 baseline PHPStan de 90 → un `ignoreErrors` para el `$router` global, #5 partir README
+(48 KB). Explícitamente NO: ORM, broker de colas, routing por atributos, DI compilado.
+
+---
+
 ## En qué estoy trabajando ahora
 
 **Expansión de la capa SaaS del framework**, guiada por
@@ -110,9 +135,9 @@ detallado. El pre-push hook bloquea push si algo falla.
   (y una vez en este archivo). Se purgó del historial con `git filter-repo` y **nunca
   llegó a GitHub** → conviene rotarla en el panel de Groq. El valor real no se anota en git.
 - **Todo pusheado**: `origin/main` al día (Fases 1–4 + ADR + memoria). 0 commits pendientes.
-- **Deuda preexistente no tocada**: `Cliente::create()`/`update()` son stubs
-  (`RuntimeException('not implemented yet')`) — vienen así del scaffolding, fuera del
-  alcance actual.
+- **Deuda preexistente RESUELTA (2026-06-09, D20)**: `Cliente::create()`/`update()` ya no
+  son stubs que tiran 500 — son un ejemplo de scaffolding funcional (columna demo `nombre`,
+  CRUD e2e verde contra MySQL real).
 
 ## Decisiones abiertas pendientes para fases futuras (del ADR)
 
