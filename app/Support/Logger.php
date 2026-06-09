@@ -46,7 +46,7 @@ class Logger implements LoggerInterface
 
         match ($this->channelConfig['driver'] ?? 'stderr') {
             'file'   => $this->writeFile($this->channelConfig['path'] ?? '/tmp/app.log', $entry),
-            'stderr' => fwrite(STDERR, $entry . PHP_EOL),
+            'stderr' => $this->writeStderr($entry),
             default  => null,
         };
     }
@@ -55,11 +55,32 @@ class Logger implements LoggerInterface
     {
         $dir = dirname($path);
         if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
-            fwrite(STDERR, $entry . PHP_EOL);
+            $this->writeStderr($entry);
             return;
         }
         if (@file_put_contents($path, $entry . PHP_EOL, FILE_APPEND | LOCK_EX) === false) {
-            fwrite(STDERR, $entry . PHP_EOL);
+            $this->writeStderr($entry);
         }
+    }
+
+    private function writeStderr(string $entry): void
+    {
+        $stream = $this->stderrStream();
+        if (is_resource($stream)) {
+            fwrite($stream, $entry . PHP_EOL);
+        }
+    }
+
+    /**
+     * Stream de STDERR portable entre SAPIs. La constante `STDERR` SOLO existe
+     * bajo CLI; en SAPI web (mod_php / php-fpm) referenciarla lanza un Error y
+     * tumba la request. `php://stderr` funciona en todos los SAPIs. Protegido
+     * para poder sobrescribirlo en tests.
+     *
+     * @return resource|false
+     */
+    protected function stderrStream()
+    {
+        return defined('STDERR') ? STDERR : fopen('php://stderr', 'wb');
     }
 }
