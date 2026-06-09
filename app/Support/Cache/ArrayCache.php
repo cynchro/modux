@@ -42,4 +42,9 @@ class ArrayCache implements CacheInterface
         }
         return true;
     }
+
+    public function available(): bool
+    {
+        return true;
+    }
 }

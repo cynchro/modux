@@ -57,7 +57,14 @@ class WebhookVerifier implements WebhookVerifierInterface
             return false;
         }
 
-        // Anti-replay: la misma firma no se acepta dos veces dentro de la ventana.
+        // Anti-replay: requiere un store que persista. Si el cache no es
+        // operativo (p. ej. APCu deshabilitado), no podemos detectar reenvíos
+        // → fallamos cerrado en vez de aceptar firmas sin protección.
+        if (!$this->cache->available()) {
+            return false;
+        }
+
+        // La misma firma no se acepta dos veces dentro de la ventana.
         $nonce = self::REPLAY_PREFIX . hash('sha256', $parts['v1']);
         if ($this->cache->has($nonce)) {
             return false;

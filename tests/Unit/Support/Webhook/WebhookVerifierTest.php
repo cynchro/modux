@@ -50,6 +50,25 @@ class WebhookVerifierTest extends UnitTestCase
         $this->assertFalse($verifier->verify($this->requestFor(self::PAYLOAD, $header), self::SECRET));
     }
 
+    public function test_fails_closed_when_replay_store_unavailable(): void
+    {
+        // Cache no operativo (p. ej. APCu deshabilitado): no podemos detectar
+        // reenvíos, así que una firma por lo demás válida debe rechazarse en vez
+        // de aceptarse sin protección anti-replay.
+        $inertCache = new class extends ArrayCache {
+            public function available(): bool
+            {
+                return false;
+            }
+        };
+
+        $verifier = new WebhookVerifier($inertCache);
+        $header   = $verifier->sign(self::PAYLOAD, self::SECRET);
+        $request  = $this->requestFor(self::PAYLOAD, $header);
+
+        $this->assertFalse($verifier->verify($request, self::SECRET));
+    }
+
     public function test_rejects_wrong_secret(): void
     {
         $verifier = new WebhookVerifier(new ArrayCache());
