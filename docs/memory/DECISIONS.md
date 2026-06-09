@@ -433,6 +433,28 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   (`[Unreleased]` → `[2.0.0] - 2026-06-09`). **Falta el tag** (`git tag -a v2.0.0`), que se
   crea sobre `main` **tras el merge del PR** — no sobre la rama.
 
+### D26 — Hardening post-v2.0.0 (benchmark + auditoría): Logger, JWT, composer audit
+- **Contexto**: tras la v2.0.0 se corrió un benchmark (performance + seguridad) comparando
+  Modux con la familia Slim/Mezzio. Perf (imagen de prod real, Apache mod_php + MySQL):
+  `/` ~3.523 req/s (overhead ~0,28 ms/req), `/health` ~1.914 req/s, 0 fallos → tier
+  micro-framework rápido. La auditoría arrojó 3 accionables, todos resueltos:
+- **Bug real `Logger` bajo SAPI web (descubierto en el benchmark)**: el driver `stderr` y el
+  fallback de `writeFile` usaban la constante `STDERR`, que **solo existe en CLI** →
+  `LOG_CHANNEL=stderr` bajo Apache/php-fpm tumbaba cada request con 500. Fix: `php://stderr`
+  (portable) vía `writeStderr()`/`stderrStream()` (protegido, sobrescribible en tests).
+  `LoggerTest` cubre stderr-portable, file y filtrado por nivel.
+- **`firebase/php-jwt` 6.11.1 → 7.0.5**: cierra `CVE-2025-45769` (weak encryption, baja). API
+  (`JWT::encode`/`decode`+`Key`) sin cambios; validado con roundtrip + las 19 Feature tests de
+  auth contra DB real.
+- **`composer audit` bloqueante** en el CI (job `quality`) y en el pre-push hook → cualquier
+  CVE nuevo en deps frena build/push.
+- **Versionado**: son patch (bugfix + seguridad, sin API breaking) → **v2.0.1** (CHANGELOG
+  `[Unreleased]`). En rama `fix/seguridad-post-v2`.
+- **Postura de seguridad (OWASP API Top 10)**: fuerte en BOLA (aislamiento por tenant), auth
+  (JWT+revocación+bcrypt12), authz multidimensional (RBAC+scopes+entitlements), webhooks
+  (HMAC+anti-replay+fail-closed), headers (CSP/HSTS/etc.). Gaps: sin cifrado de campos, sin
+  OAuth2 server (planeado `modux-oauth`).
+
 ---
 
 ## Convención de trabajo adoptada (meta-decisión)

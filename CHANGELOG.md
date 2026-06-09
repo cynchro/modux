@@ -7,6 +7,23 @@ versionado es [SemVer](https://semver.org/lang/es/). Las versiones hasta la
 `v1.2.0` están en los tags de git y el historial; este archivo arranca el
 registro formal a partir de los cambios siguientes.
 
+## [Unreleased] — apunta a v2.0.1
+
+### Corregido / Seguridad
+
+- **`Logger` rompía bajo SAPI web.** El driver `stderr` (y el fallback de escritura
+  a archivo) usaban la constante `STDERR`, que **solo existe en CLI**: con
+  `LOG_CHANNEL=stderr` bajo Apache/php-fpm, cada request lanzaba un `Error` y
+  devolvía 500. Ahora se usa `php://stderr` (portable entre SAPIs). Cubierto por
+  `LoggerTest`. Hallazgo del benchmark de la v2.0.0.
+- **`firebase/php-jwt` 6.x → 7.0.5** — cierra `CVE-2025-45769` (weak encryption,
+  severidad baja). La API usada (`JWT::encode` / `JWT::decode` + `Key`) no cambió.
+
+### Añadido
+
+- **`composer audit` en el CI y en el pre-push hook** — falla el build/push ante
+  cualquier advisory de seguridad en dependencias.
+
 ## [2.0.0] - 2026-06-09
 
 ### ⚠ Cambios incompatibles (BREAKING)
