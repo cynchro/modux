@@ -7,6 +7,17 @@ versionado es [SemVer](https://semver.org/lang/es/). Las versiones hasta la
 `v1.2.0` están en los tags de git y el historial; este archivo arranca el
 registro formal a partir de los cambios siguientes.
 
+## [Unreleased]
+
+### Documentación
+
+- Sincronizados los docs de usuario con el código de la v2.x: la sección de Feature
+  tests (`docs/infrastructure.md`) ahora describe el harness real (`actingAsUser`,
+  `postJson/getJson` → `['status','json','headers']`, sembradores, rollback por test,
+  requisito de MySQL y skip sin DB) en vez de una API que no existía; documentados
+  `LOG_CHANNEL` (con la portabilidad `php://stderr`), `composer audit` en el quality
+  gate, el MySQL service del CI y el caveat de store compartido del anti-replay.
+
 ## [2.0.1] - 2026-06-09
 
 ### Corregido / Seguridad
