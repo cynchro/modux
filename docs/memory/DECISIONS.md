@@ -405,10 +405,11 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
     `AppException`→status/headers como el Handler. Helpers: `actingAsUser` (tenant+usuario+
     JWT guardado en `usuarios.token`), `seedTenant`, `grantFlag/grantQuota/recordUsage`,
     `registerRoute` (rutas ad-hoc para gating).
-  - **Tests** (15): `AuthFlowTest` (login ok/credenciales inválidas/token revocado/sin token),
+  - **Tests** (19): `AuthFlowTest` (login ok/credenciales inválidas/token revocado/sin token),
     `ClienteCrudTest` (CRUD completo + validación 422 + 401), `TenantIsolationTest` (A no ve
     ni alcanza datos de B), `GatingTest` (entitlement 402/200, quota 200 vs 429+Retry-After,
-    quota sin entitlement 402). Fixture `PingController`.
+    quota sin entitlement 402), `ApiKeysTest` (emisión/listado/revocación + key sin scope
+    `apikeys.manage` → 403, prevención de escalada). Fixture `PingController`.
   - **CI**: service `mysql:8.0` (db `monolito_test`, root sin clave, health-check) en el job
     `quality`; `composer test` ahora corre Unit+Feature contra DB real.
 - **Skip elegante**: si MySQL no está disponible (sin `pdo_mysql` o sin DB — p. ej. el
@@ -419,6 +420,18 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
 - **Validación**: host sin DB → 221 pass + 15 skip (verde, pre-push ok); con MySQL real
   (php:8.3-cli + pdo_mysql, red Docker aislada) → **236 tests / 361 assertions** verdes
   (221 unit + 15 feature). PHPStan 0, PHPCS limpio (158 archivos, incluye los tests nuevos).
+
+### D25 — CHANGELOG + versionado SemVer (release pendiente)
+- **Qué**: se creó `CHANGELOG.md` (Keep a Changelog) con la sección `[Unreleased]` que
+  documenta toda la tanda (D18–D24). El proyecto ya estaba en `v1.2.0` (tags de git), no en
+  0.x.
+- **Decisión SemVer (a confirmar el usuario antes de taggear)**: agregar `available()` a
+  `CacheInterface` es una adición a una interfaz pública → **breaking para implementadores**
+  propios → la release que lo incluya debería ser **major `v2.0.0`**. Marcado como BREAKING
+  en el CHANGELOG.
+- **Por qué NO se tagueó aún**: (a) el número de versión con un cambio breaking amerita el OK
+  del usuario; (b) un tag debe apuntar a `main` tras el merge del PR, no a la rama. Queda como
+  paso post-merge.
 
 ---
 
