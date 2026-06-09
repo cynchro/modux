@@ -5,6 +5,7 @@ use App\Http\Middleware\AuthMiddleware;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\TenantMiddleware;
 
+/** @var \App\Support\Router $router (inyectado por bootstrap/app.php al cargar las rutas) */
 $router->group([AuthMiddleware::class, AdminMiddleware::class], function ($router) {
     // Roles
     $router->get('/admin/roles', [AdminController::class, 'indexRoles']);

@@ -53,7 +53,7 @@ class ApiKeyRepository
      */
     private function present(array $row): array
     {
-        $row['scopes']  = isset($row['scopes']) && $row['scopes'] !== null
+        $row['scopes']  = isset($row['scopes'])
             ? (json_decode((string) $row['scopes'], true) ?: [])
             : [];
         $row['revoked'] = ($row['revoked_at'] ?? null) !== null;

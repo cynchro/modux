@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-class Response
+final class Response
 {
     private int $status  = 200;
     private array $headers = ['Content-Type' => 'application/json; charset=utf-8'];
