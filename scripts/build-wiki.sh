@@ -84,8 +84,9 @@ if [ "$NO_PUSH" = "1" ]; then
   exit 0
 fi
 
-# 4) Clonar la wiki (deriva la URL del remoto origin), sincronizar y pushear.
-WIKI_URL="$(git config --get remote.origin.url | sed 's/\.git$//').wiki.git"
+# 4) Clonar la wiki, sincronizar y pushear. La URL se deriva del remoto origin,
+#    salvo que se fije MODUX_WIKI_REMOTE (lo usa el CI para inyectar el token).
+WIKI_URL="${MODUX_WIKI_REMOTE:-$(git config --get remote.origin.url | sed 's/\.git$//').wiki.git}"
 WIKI="$(mktemp -d)"
 trap 'rm -rf "$BUILD" "$WIKI"' EXIT
 
@@ -99,6 +100,14 @@ rm -f "$WIKI"/*.md
 cp "$BUILD"/*.md "$WIKI"/
 
 cd "$WIKI"
+
+# Identidad de commit: respeta la global si existe; si no (p. ej. en CI), usa una
+# por defecto para no fallar.
+if ! git config user.email >/dev/null 2>&1; then
+  git config user.name "github-actions[bot]"
+  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+fi
+
 git add -A
 if git diff --cached --quiet; then
   echo "→ La wiki ya está al día (sin cambios)."

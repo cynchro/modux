@@ -14,6 +14,8 @@ registro formal a partir de los cambios siguientes.
 - **`scripts/build-wiki.sh`** — regenera y publica la wiki de GitHub a partir de
   `README.md` + `docs/*.md` (espejo idempotente, con `--no-push` para revisar). Mantiene
   la wiki en sync con la doc del repo sin trabajo manual.
+- **Workflow `.github/workflows/wiki.yml`** — publica la wiki automáticamente al pushear a
+  `main` cuando cambian `README.md`, `docs/**` o el script (usa `GITHUB_TOKEN`).
 
 ### Documentación
 
