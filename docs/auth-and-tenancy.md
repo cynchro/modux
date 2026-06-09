@@ -125,6 +125,14 @@ produces the header for outbound webhooks. Inject the interface in any controlle
 receives provider callbacks (e.g. payment gateways) and verify against that integration's
 secret before acting. Reading the raw body relies on `Request::rawBody()`.
 
+**El anti-replay exige un store operativo.** El nonce vive en `CacheInterface`, cuyo binding
+por defecto es `ApcuCache`. Si el cache no es operativo (`available() === false`, p. ej. APCu
+deshabilitado), `verify()` **falla cerrado** — rechaza la firma en vez de aceptarla sin
+protección — y se loguea un aviso al bootear. Además, **APCu es por proceso**: en un deploy
+multi-instancia, vinculá `CacheInterface` a un store compartido (Redis/DB) implementando la
+interfaz, o un reenvío podría no detectarse al caer en otra instancia. El esquema HMAC no
+cambia. Ver `docs/adr/0001-saas-identity-entitlements-billing.md` §1.3.
+
 ---
 
 ## DI Container

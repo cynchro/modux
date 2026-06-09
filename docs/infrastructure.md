@@ -44,7 +44,14 @@ Log levels (in order): `debug`, `info`, `notice`, `warning`, `error`, `critical`
 
 The minimum level is controlled by `LOG_LEVEL`. Messages below it are silently dropped.
 
-If the log file cannot be written, the logger falls back to `STDERR` automatically — no silent failures.
+The destination is controlled by `LOG_CHANNEL`:
+
+- `file` (default) — appends to `storage/logs/app.log`.
+- `stderr` — writes to the process error stream. It uses `php://stderr` (not the
+  `STDERR` constant), so it works under **any SAPI** — CLI, Apache/mod_php or php-fpm.
+
+If the log file cannot be written, the logger falls back to stderr automatically — no
+silent failures.
 
 ---
 
@@ -124,9 +131,10 @@ return new class {
 ## Testing
 
 ```bash
-composer test      # PHPUnit (220 tests)
+composer test      # PHPUnit (unit + integración)
 composer lint      # phpcs PSR-12
 composer analyse   # phpstan level 6 (PHPStan 2.x)
+composer audit     # vulnerabilidades en dependencias
 ```
 
 ### Quality gate — don't push a broken base
@@ -134,7 +142,7 @@ composer analyse   # phpstan level 6 (PHPStan 2.x)
 This is a versioned framework that others depend on, so the same checks run in three places:
 
 - **Local pre-push hook** (`.githooks/pre-push`) — blocks `git push` unless `composer validate`,
-  lint, static analysis and tests all pass. Enable it once per clone:
+  `composer audit`, lint, static analysis and tests all pass. Enable it once per clone:
 
   ```bash
   git config core.hooksPath .githooks
@@ -142,8 +150,9 @@ This is a versioned framework that others depend on, so the same checks run in t
 
   Bypass only in an emergency with `git push --no-verify`.
 
-- **CI** (`.github/workflows/ci.yml`) — runs the same gate plus a Docker image build on every
-  push and PR to `main`.
+- **CI** (`.github/workflows/ci.yml`) — runs the same gate (incl. `composer audit`) against a
+  real **MySQL 8 service** so the integration tests exercise SQL/migrations, plus a Docker
+  image build, on every push and PR to `main`.
 
 ### Unit tests — mock repositories, no DB
 
@@ -176,27 +185,44 @@ class ProductoServiceTest extends UnitTestCase
 - `setUp()` — clears superglobals before each test
 - `makeRequest(?array $user, ?string $tenantId): Request` — builds a Request with pre-set user/tenant context
 
-### Feature tests — full HTTP dispatch, real DB, auto-rollback
+### Feature / integration tests — HTTP real, DB real, rollback por test
+
+Despachan la petición por el Router real (los middlewares de ruta —Auth, Tenant, Scope,
+Entitlement, Quota— se ejecutan) contra una base **MySQL real**. Cada test corre dentro de
+una transacción que se revierte en `tearDown()`, así que no hace falta re-migrar entre tests.
 
 ```php
-class ProductoFeatureTest extends FeatureTestCase
+class ClienteFeatureTest extends FeatureTestCase
 {
     public function test_create_returns_201(): void
     {
-        $token = $this->loginAs('admin@admin.com', 'admin123');
+        $ctx = $this->actingAsUser(); // siembra tenant + usuario + JWT
 
-        $response = $this->post('/productos', [
-            'nombre' => 'Mesa',
-            'precio' => 150,
-        ], $token);
+        $res = $this->postJson('/clientes', ['nombre' => 'Acme'], $this->bearer($ctx['token']));
 
-        $this->assertTrue($response['success']);
-        $this->assertSame(201, $this->lastStatus());
+        $this->assertSame(201, $res['status']);
+        $this->assertSame('Acme', $res['json']['data']['nombre']);
     }
 }
 ```
 
-Each feature test wraps its DB operations in a transaction that rolls back in `tearDown()`.
+`FeatureTestCase` provee:
+
+- `actingAsUser(?string $tenantId = null, int $rol = 1): array` — siembra tenant + usuario,
+  genera su JWT (guardado en `usuarios.token`) y devuelve `['tenantId','userId','token']`.
+- `getJson` / `postJson` / `putJson` / `deleteJson(...)` — despachan y devuelven
+  `['status' => int, 'json' => array, 'headers' => array]`. Las `AppException` se mapean a
+  status/headers igual que el `Handler` de producción (p. ej. 402, 429 + `Retry-After`).
+- `bearer(string $token): array` — header `Authorization: Bearer …`.
+- `seedTenant()`, `grantFlag()`, `grantQuota()`, `recordUsage()` — sembrado de dominio para
+  probar entitlements y cuotas.
+- `registerRoute(...)` — registra una ruta ad-hoc (p. ej. para ejercitar middlewares de gating
+  sin que un módulo del base exponga una ruta protegida).
+
+**Requieren MySQL.** Las env `DB_*` salen de `phpunit.xml` (`monolito_test`, `root`, sin clave);
+el esquema se crea una vez por proceso (drop-all + migraciones). Si no hay base alcanzable
+(p. ej. en el pre-push local sin DB), los Feature tests **se saltan** en lugar de fallar — el
+**CI** los corre contra su service `mysql:8.0`.
 
 ---
 
