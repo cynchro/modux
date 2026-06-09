@@ -17,7 +17,10 @@ e2e contra MySQL real).
 con `@var` + `Response` final + comparación muerta de `ApiKeyRepository`; `D21`) y **#5**
 (partir README 48 KB→8 KB en `docs/`, `D22`).
 
-**Auditoría liviana COMPLETA (#1–#5).** Todo con batería verde, sin commitear aún.
+**Auditoría liviana COMPLETA (#1–#5)** + pendientes cerrados (**D23**): inmutabilidad de
+migraciones (revert `0004` + nueva `0010` para la columna `nombre`, e2e verde) y caveat
+operativo del anti-replay multi-instancia en el ADR 0001 §1.3. Commiteado en rama
+`mejoras/auditoria-liviana` (7 commits). Batería verde.
 
 Notas previas (ya superadas):
 #4 baseline PHPStan de 90 → un `ignoreErrors` para el `$router` global, #5 partir README

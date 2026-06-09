@@ -323,8 +323,9 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   y ruteado).
 - **Decisión del usuario (#3 de la auditoría, opción "ejemplo completo")**: convertirlo en
   un CRUD que corre end-to-end, no quitarlo del base. Cambios:
-  - Migración `0004`: + columna demo `nombre VARCHAR(255) NOT NULL` (comentada como ejemplo
-    a reemplazar por columnas de dominio).
+  - Columna demo `nombre VARCHAR(255) NOT NULL` (a reemplazar por columnas de dominio).
+    *(Nota: inicialmente se editó la migración `0004` en sitio; corregido en D23 vía una
+    migración nueva `0010` para respetar la inmutabilidad de migraciones publicadas.)*
   - `CreateClienteRequest`/`UpdateClienteRequest`: regla `'nombre' =>
     'required|string|min:2|max:255'` (PUT = reemplazo).
   - `ClienteRepository::create()` → `INSERT nombre, tenant_id` + `findById(lastInsertId)`;
@@ -337,9 +338,23 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
   crea la tabla, `create`→`findById` OK, `update` con tenant correcto afecta 1 fila, con
   tenant ajeno 0 filas (aislamiento row-level verificado). `ClienteServiceTest` mockea el
   repo → intacto.
-- **Nota**: la migración `0004` se editó en sitio (CREATE TABLE IF NOT EXISTS); en instalaciones
-  ya migradas la columna `nombre` requiere un `ALTER TABLE` manual. Para nuevas instancias
-  (caso del framework como plantilla) corre limpio con `php modux migrate`.
+### D23 — Inmutabilidad de migraciones: revertir `0004`, añadir `0010` (anti-replay + caveat ADR)
+- **Qué**: D20 había editado la migración **ya publicada** `0004_add_tenant_to_clientes`
+  para meter la columna `nombre`, lo que rompe la inmutabilidad de migraciones (una DB ya
+  migrada no la re-ejecuta → necesitaría `ALTER` manual). Corregido:
+  - `0004` revertida a su forma original publicada.
+  - Nueva migración `0010_add_nombre_to_clientes` (`ALTER TABLE clientes ADD/DROP COLUMN
+    nombre`, idempotente vía `information_schema`, `down()` reversible). El runner trackea
+    migraciones por filename en la tabla `migrations` → corre una sola vez en nueva o
+    existente; ambas convergen al mismo esquema.
+- **Por qué**: profesionalismo/solidez — las migraciones publicadas no se editan, se
+  suceden. Cierra el pendiente "ALTER manual" de D20.
+- **Validación**: e2e contra MySQL 8 real (descartable): 0004 sin `nombre` → 0010 lo agrega
+  → guard idempotente → CRUD + aislamiento por tenant → `down()` revierte. Batería verde
+  (221 tests / PHPStan 0 / PHPCS).
+- **Doc**: ADR 0001 §1.3 ampliado con el caveat operativo de D18 — el anti-replay exige un
+  **store compartido** (APCu es por-proceso); en multi-instancia, vincular `CacheInterface`
+  a Redis/DB. El verifier ya falla cerrado si el cache no opera.
 
 ### D21 — Vaciar el baseline de PHPStan (84 → 0)
 - **Qué**: el `phpstan-baseline.neon` tenía 84 entradas que escondían cualquier regresión
