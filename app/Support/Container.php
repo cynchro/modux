@@ -45,7 +45,7 @@ class Container implements ContainerInterface
             return $resolved;
         }
 
-        return $this->autowire($id);
+        return $this->build($id);
     }
 
     public function has(string $id): bool
@@ -55,7 +55,7 @@ class Container implements ContainerInterface
 
     public function make(string $class): object
     {
-        return $this->autowire($class);
+        return $this->build($class);
     }
 
     /**
@@ -63,6 +63,17 @@ class Container implements ContainerInterface
      * constructor parameters in the order they appear.
      */
     public function makeWith(string $class, mixed ...$scalars): object
+    {
+        return $this->build($class, $scalars);
+    }
+
+    /**
+     * Autowire $class: typed (non-builtin) params resolve from the container;
+     * builtin params consume $scalars positionally, then fall back to defaults.
+     *
+     * @param list<mixed> $scalars
+     */
+    private function build(string $class, array $scalars = []): object
     {
         if (!class_exists($class)) {
             throw new NotFoundException($class);
@@ -86,44 +97,8 @@ class Container implements ContainerInterface
                 continue;
             }
 
-            if (isset($scalars[$scalarIndex])) {
+            if (array_key_exists($scalarIndex, $scalars)) {
                 $dependencies[] = $scalars[$scalarIndex++];
-                continue;
-            }
-
-            if ($param->isDefaultValueAvailable()) {
-                $dependencies[] = $param->getDefaultValue();
-                continue;
-            }
-
-            throw new ContainerException(
-                "Cannot resolve parameter [{$param->getName()}] in [{$class}]."
-            );
-        }
-
-        return $reflector->newInstanceArgs($dependencies);
-    }
-
-    private function autowire(string $class): object
-    {
-        if (!class_exists($class)) {
-            throw new NotFoundException($class);
-        }
-
-        $reflector   = new \ReflectionClass($class);
-        $constructor = $reflector->getConstructor();
-
-        if ($constructor === null) {
-            return new $class();
-        }
-
-        $dependencies = [];
-
-        foreach ($constructor->getParameters() as $param) {
-            $type = $param->getType();
-
-            if ($type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
-                $dependencies[] = $this->get($type->getName());
                 continue;
             }
 
