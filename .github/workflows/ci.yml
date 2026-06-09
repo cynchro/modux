@@ -8,8 +8,26 @@ on:
 
 jobs:
   quality:
-    name: Lint · Static analysis · Tests
+    name: Lint · Static analysis · Tests (unit + integration)
     runs-on: ubuntu-latest
+
+    # MySQL real para los Feature/integration tests (tests/Feature/*). Debe
+    # coincidir con las env DB_* de phpunit.xml (monolito_test, root, sin clave).
+    # FeatureTestCase crea el esquema (drop-all + migraciones) en el primer test.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: monolito_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     steps:
       - uses: actions/checkout@v4
 

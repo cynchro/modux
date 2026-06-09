@@ -393,6 +393,33 @@ clientes y el CI se incorporaron justo antes de esta sesión.)*
 - **Resultado**: README 1450→197 líneas (48578→8246 bytes). Sin impacto en CI/tests/lint
   (markdown). Cierra la auditoría liviana (#1–#5).
 
+### D24 — Red de Feature/integration tests contra MySQL real + CI
+- **Qué**: el framework tenía `FeatureTestCase` pero **0 Feature tests** y el CI no levantaba
+  DB → ninguna ruta de SQL/migraciones/pipeline/auth/gating estaba cubierta automáticamente
+  (toda la validación era e2e manual con Docker). Se construyó la red completa:
+  - **Harness** (`FeatureTestCase`): PDO compartido entre test y app (mismo singleton del
+    container); esquema creado una vez por proceso (drop-all + todas las migraciones);
+    **transacción por test con rollback** en tearDown (aislamiento sin re-migrar); bindings
+    de servicios (DB/Cache=ArrayCache/Entitlement/Usage/Webhook/EventDispatcher/Router);
+    `request()` despacha por el Router real (corren los middlewares de ruta) y mapea
+    `AppException`→status/headers como el Handler. Helpers: `actingAsUser` (tenant+usuario+
+    JWT guardado en `usuarios.token`), `seedTenant`, `grantFlag/grantQuota/recordUsage`,
+    `registerRoute` (rutas ad-hoc para gating).
+  - **Tests** (15): `AuthFlowTest` (login ok/credenciales inválidas/token revocado/sin token),
+    `ClienteCrudTest` (CRUD completo + validación 422 + 401), `TenantIsolationTest` (A no ve
+    ni alcanza datos de B), `GatingTest` (entitlement 402/200, quota 200 vs 429+Retry-After,
+    quota sin entitlement 402). Fixture `PingController`.
+  - **CI**: service `mysql:8.0` (db `monolito_test`, root sin clave, health-check) en el job
+    `quality`; `composer test` ahora corre Unit+Feature contra DB real.
+- **Skip elegante**: si MySQL no está disponible (sin `pdo_mysql` o sin DB — p. ej. el
+  pre-push local del host), los Feature tests **se saltan** en vez de fallar (`markTestSkipped`
+  en setUp ante `PDOException`). El CI es el punto de enforcement de integración.
+- **Por qué**: es el mayor diferencial de "estable y sólido" — convierte la validación manual
+  en red de regresión automática. Pedido explícito del usuario.
+- **Validación**: host sin DB → 221 pass + 15 skip (verde, pre-push ok); con MySQL real
+  (php:8.3-cli + pdo_mysql, red Docker aislada) → **236 tests / 361 assertions** verdes
+  (221 unit + 15 feature). PHPStan 0, PHPCS limpio (158 archivos, incluye los tests nuevos).
+
 ---
 
 ## Convención de trabajo adoptada (meta-decisión)

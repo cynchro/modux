@@ -19,8 +19,13 @@ con `@var` + `Response` final + comparación muerta de `ApiKeyRepository`; `D21`
 
 **Auditoría liviana COMPLETA (#1–#5)** + pendientes cerrados (**D23**): inmutabilidad de
 migraciones (revert `0004` + nueva `0010` para la columna `nombre`, e2e verde) y caveat
-operativo del anti-replay multi-instancia en el ADR 0001 §1.3. Commiteado en rama
-`mejoras/auditoria-liviana` (7 commits). Batería verde.
+operativo del anti-replay multi-instancia en el ADR 0001 §1.3.
+
+**Red de integración (D24)** — el mayor diferencial de solidez: `FeatureTestCase` completo
+(DB real + rollback por test), 15 Feature tests (auth/CRUD/aislamiento/gating), MySQL service
+en CI, skip elegante sin DB. host: 221 pass + 15 skip; con DB: 236 pass / 361 assertions.
+
+Todo en rama `mejoras/auditoria-liviana`. Batería verde (PHPStan 0, PHPCS limpio).
 
 Notas previas (ya superadas):
 #4 baseline PHPStan de 90 → un `ignoreErrors` para el `$router` global, #5 partir README
