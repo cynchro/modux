@@ -23,6 +23,9 @@ fi
 echo "▶ composer validate…"
 composer validate --no-check-publish --strict
 
+echo "▶ composer audit (vulnerabilidades en deps)…"
+composer audit
+
 echo "▶ PHPCS (lint)…"
 composer lint
 
