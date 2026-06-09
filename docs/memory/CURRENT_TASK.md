@@ -25,7 +25,14 @@ operativo del anti-replay multi-instancia en el ADR 0001 §1.3.
 (DB real + rollback por test), 15 Feature tests (auth/CRUD/aislamiento/gating), MySQL service
 en CI, skip elegante sin DB. host: 221 pass + 15 skip; con DB: 236 pass / 361 assertions.
 
-Todo en rama `mejoras/auditoria-liviana`. Batería verde (PHPStan 0, PHPCS limpio).
+Todo en rama `mejoras/auditoria-liviana` → **mergeado a main y taggeado `v2.0.0`**.
+
+**Post-v2.0.0 — benchmark + hardening (D26, rama `fix/seguridad-post-v2`, apunta a v2.0.1):**
+benchmark de perf (~3.5k req/s en `/`, tier micro-framework rápido) + auditoría de seguridad.
+3 fixes: bug del `Logger` bajo SAPI web (`STDERR`→`php://stderr`, + `LoggerTest`), bump
+`firebase/php-jwt` 6→7.0.5 (CVE-2025-45769), `composer audit` bloqueante en CI + pre-push.
+243 tests host (19 skip) + 19 Feature contra DB real verdes. PHPStan 0, PHPCS limpio, audit
+limpio. Falta commitear/pushear esta rama.
 
 Notas previas (ya superadas):
 #4 baseline PHPStan de 90 → un `ignoreErrors` para el `$router` global, #5 partir README
