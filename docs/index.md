@@ -66,3 +66,25 @@ Los números son indicativos (un host containerizado) y varían con el hardware 
 - **[Infraestructura](infrastructure.md)** — config, logger, migraciones, **testing**.
 - **[Plataforma](platform.md)** — eventos, RBAC, entitlements, cuotas, cola de jobs.
 - **[Módulos opcionales](optional-modules.md)** — IA (LLM + RAG) y Billing (Stripe / Mercado Pago).
+
+---
+
+## Contacto
+
+**alexissaucedo@gmail.com** · [cynchrolabs.com.ar](https://www.cynchrolabs.com.ar)
+
+## ¿Me invitás un café?
+
+Si Modux te ahorró tiempo, una donación ayuda a mantener el proyecto.
+
+<a href="https://www.paypal.com/donate/?hosted_button_id=YX332RT7KSJ4Q">
+  <img src="https://img.shields.io/badge/PayPal-Donar-blue?logo=paypal" alt="Donar con PayPal"/>
+</a>
+
+---
+
+⭐ Si te gusta el proyecto, ¡dejá una estrella!
+
+<a href="https://github.com/cynchro/modux">
+  <img src="https://img.shields.io/github/stars/cynchro/modux?style=social" alt="GitHub stars"/>
+</a>
