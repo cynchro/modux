@@ -1,6 +1,5 @@
 # Módulos, ruteo y secuencia de arranque
 
-> Parte del manual de [Modux](../README.md). Volvé al [índice de documentación](../README.md#documentación).
 
 ## Boot sequence
 

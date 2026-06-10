@@ -16,6 +16,10 @@ registro formal a partir de los cambios siguientes.
   la wiki en sync con la doc del repo sin trabajo manual.
 - **Workflow `.github/workflows/wiki.yml`** — publica la wiki automáticamente al pushear a
   `main` cuando cambian `README.md`, `docs/**` o el script (usa `GITHUB_TOKEN`).
+- **Sitio de documentación (MkDocs Material) en GitHub Pages** — `mkdocs.yml` + workflow
+  `docs.yml` generan un sitio navegable (sidebar, buscador, dark mode, "edit on GitHub")
+  desde los mismos `docs/`, publicado en `https://cynchro.github.io/modux/`. Se quitaron los
+  back-links repo-específicos de los `docs/*.md` y se añadió `docs/index.md` como home.
 
 ### Documentación
 

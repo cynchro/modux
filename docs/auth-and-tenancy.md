@@ -1,6 +1,5 @@
 # Auth, API keys, webhooks, DI y multi-tenancy
 
-> Parte del manual de [Modux](../README.md). Volvé al [índice de documentación](../README.md#documentación).
 
 ## Authentication
 

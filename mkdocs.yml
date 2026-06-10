@@ -1,0 +1,67 @@
+site_name: Modux
+site_description: A lightweight, dependency-injection-first PHP modular-monolith framework.
+site_url: https://cynchro.github.io/modux/
+repo_url: https://github.com/cynchro/modux
+repo_name: cynchro/modux
+edit_uri: edit/main/docs/
+copyright: Modux · MIT
+
+docs_dir: docs
+
+# El sitio se arma solo desde la doc de usuario; lo interno queda fuera.
+exclude_docs: |
+  memory/
+
+theme:
+  name: material
+  language: es
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Modo oscuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Modo claro
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.top
+    - navigation.sections
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.details
+
+nav:
+  - Inicio: index.md
+  - CLI: cli.md
+  - Módulos y ruteo: modules.md
+  - HTTP: http.md
+  - Auth y multi-tenancy: auth-and-tenancy.md
+  - Infraestructura: infrastructure.md
+  - Plataforma: platform.md
+  - Módulos opcionales: optional-modules.md
+  - Arquitectura (ADR): adr/0001-saas-identity-entitlements-billing.md
