@@ -16,8 +16,8 @@ exclude_docs: |
 theme:
   name: material
   language: es
-  logo: assets/logo.svg
-  favicon: assets/favicon.svg
+  logo: assets/logo.png
+  favicon: assets/isologo.png
   font:
     text: Inter
     code: JetBrains Mono

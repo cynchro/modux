@@ -20,9 +20,11 @@ registro formal a partir de los cambios siguientes.
   `docs.yml` generan un sitio navegable (sidebar, buscador, dark mode, "edit on GitHub")
   desde los mismos `docs/`, publicado en `https://cynchro.github.io/modux/`. Se quitaron los
   back-links repo-específicos de los `docs/*.md` y se añadió `docs/index.md` como home.
-- **Branding del sitio de docs** — logo/favicon SVG (marca modular), tipografías Inter +
-  JetBrains Mono, paleta de marca (violeta, editable en `docs/assets/extra.css`), header con
-  degradé y footer firmado por [CynchroLabs](https://cynchrolabs.com.ar/) (+ iconos sociales).
+- **Branding del sitio de docs** — logo oficial Modux (`logo.png`) en el header e isologo
+  (`isologo.png`) como favicon; paleta de marca azul-teal (navy `#24486c` + teal, editable en
+  `docs/assets/extra.css`), header con degradé navy→teal y el logo en blanco para leer encima;
+  tipografías Inter + JetBrains Mono; footer firmado por
+  [CynchroLabs](https://cynchrolabs.com.ar/) (+ iconos sociales).
 
 ### Documentación
 

@@ -1,56 +1,63 @@
 /* ============================================================================
-   Modux · branding del sitio de documentación
-   Para cambiar el color de marca (CynchroLabs), editá SOLO estas 3 variables.
+   Modux · branding del sitio de documentación (marca azul-teal de CynchroLabs)
+   Para cambiar el color de marca, editá SOLO estas variables.
    ============================================================================ */
 :root {
-  --brand:        #6d28d9; /* violeta principal  */
-  --brand-light:  #8b5cf6; /* hover / acentos    */
-  --brand-dark:   #5b21b6; /* header en dark mode */
+  --brand:           #24486c; /* navy principal        */
+  --brand-teal:      #3f8f86; /* teal acento / hover   */
+  --brand-teal-soft: #6cc0b4; /* teal claro (dark mode)*/
+  --brand-dark:      #183c54; /* navy oscuro (header)  */
 }
 
-/* Aplica la marca al primary y accent de Material (palette: custom). */
+/* Aplica la marca al primary/accent de Material (palette: custom). */
 [data-md-color-primary="custom"] {
   --md-primary-fg-color:        var(--brand);
-  --md-primary-fg-color--light: var(--brand-light);
+  --md-primary-fg-color--light: var(--brand-teal);
   --md-primary-fg-color--dark:  var(--brand-dark);
 }
 [data-md-color-accent="custom"] {
-  --md-accent-fg-color: var(--brand-light);
+  --md-accent-fg-color: var(--brand-teal);
 }
 
-/* Header con un sutil degradé de marca (toque moderno). */
+/* Header con degradé de marca (navy → teal). */
 .md-header,
 .md-tabs {
-  background: linear-gradient(90deg, var(--brand-dark) 0%, var(--brand) 100%);
+  background: linear-gradient(95deg, var(--brand-dark) 0%, var(--brand) 55%, #2f7d80 115%);
 }
 
-/* Links del contenido en el color de marca, con subrayado suave al hover. */
+/* El logo (wordmark oscuro) va en blanco para leer sobre el header de marca. */
+.md-header__button.md-logo img {
+  height: 1.8rem;
+  width: auto;
+  filter: brightness(0) invert(1);
+}
+
+/* El wordmark ya dice "MODUX FRAMEWORK" → ocultamos el site_name redundante. */
+.md-header__title {
+  display: none;
+}
+
+/* Links: navy legible en claro, teal claro en oscuro; hover teal. */
 .md-typeset a {
-  color: var(--brand-light);
-  text-decoration-color: color-mix(in srgb, var(--brand-light) 35%, transparent);
+  color: var(--brand);
+  text-decoration-color: color-mix(in srgb, var(--brand) 30%, transparent);
 }
 .md-typeset a:hover {
+  color: var(--brand-teal);
   text-decoration-color: currentColor;
 }
+[data-md-color-scheme="slate"] .md-typeset a {
+  color: var(--brand-teal-soft);
+}
 
-/* Esquinas redondeadas y aire en bloques de código y admoniciones. */
+/* Esquinas redondeadas y aire en código y admoniciones. */
 .md-typeset pre > code,
 .md-typeset .admonition,
-.md-typeset details {
-  border-radius: 10px;
-}
-.md-typeset code {
-  border-radius: 5px;
-}
+.md-typeset details { border-radius: 10px; }
+.md-typeset code { border-radius: 5px; }
 
-/* Tipografía un poco más marcada en títulos. */
+/* Títulos un poco más marcados. */
 .md-typeset h1,
-.md-typeset h2 {
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
+.md-typeset h2 { font-weight: 700; letter-spacing: -0.01em; }
 
-/* Botón "edit on GitHub" y navegación, un poco más sutiles. */
-.md-nav__link--active {
-  font-weight: 600;
-}
+.md-nav__link--active { font-weight: 600; }
