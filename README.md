@@ -41,13 +41,18 @@ Request → Kernel → Global pipeline (CORS, RequestSize, SecurityHeaders, Logg
 
 ## Installation
 
+Create a new project from the [Packagist](https://packagist.org/packages/cynchro/modux)
+skeleton (recommended):
+
 ```bash
-git clone <repo> my-project
-cd my-project
-composer install
+composer create-project cynchro/modux my-app
+cd my-app
 cp .env.example .env
-# Edit .env — see Environment Variables section
+# Edit .env — see Environment Variables
 ```
+
+> To contribute to the framework itself instead, clone the repo:
+> `git clone https://github.com/cynchro/modux.git && cd modux && composer install`
 
 ---
 
@@ -59,7 +64,6 @@ cp .env.example .env
 # Set JWT_SECRET, DB_HOST, DB_NAME, DB_USER, DB_PASS
 
 # 2. Run migrations
-cd backend/src
 php modux migrate
 
 # 3. Start the server
@@ -91,7 +95,7 @@ curl http://localhost:8080/health
 ```json
 {
   "success": true,
-  "data": { "status": "ok", "php": "8.2.0", "db": "ok" }
+  "data": { "status": "ok", "php": "8.2.0", "checks": { "db": "ok", "cache": "ok" } }
 }
 ```
 

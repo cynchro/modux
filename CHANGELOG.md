@@ -7,6 +7,15 @@ versionado es [SemVer](https://semver.org/lang/es/). Las versiones hasta la
 `v1.2.0` están en los tags de git y el historial; este archivo arranca el
 registro formal a partir de los cambios siguientes.
 
+## [Unreleased]
+
+### Documentación
+
+- Documentada la **instalación vía Packagist** con `composer create-project cynchro/modux`
+  (el método recomendado para un skeleton `type: project`) en README y en la home del sitio
+  (ES/EN). Corregidos dos bugs del Quick start: un `cd backend/src` obsoleto (ese directorio
+  ya no existe) y el ejemplo de `/health` que mostraba el shape viejo (ahora `checks.db/cache`).
+
 ## [2.1.0] - 2026-06-10
 
 ### Añadido
