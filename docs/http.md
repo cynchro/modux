@@ -1,6 +1,5 @@
 # HTTP — Request, Response, validación y middleware
 
-> Parte del manual de [Modux](../README.md). Volvé al [índice de documentación](../README.md#documentación).
 
 ## Request API
 

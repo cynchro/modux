@@ -1,6 +1,5 @@
 # Módulos opcionales (IA, Billing)
 
-> Parte del manual de [Modux](../README.md). Volvé al [índice de documentación](../README.md#documentación).
 
 ## Optional: AI module (LLM + RAG)
 

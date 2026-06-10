@@ -1,6 +1,5 @@
 # Eventos, RBAC, entitlements, jobs, health y variables de entorno
 
-> Parte del manual de [Modux](../README.md). Volvé al [índice de documentación](../README.md#documentación).
 
 ## Events
 

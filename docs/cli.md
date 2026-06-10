@@ -1,6 +1,5 @@
 # CLI — referencia de `php modux`
 
-> Parte del manual de [Modux](../README.md). Volvé al [índice de documentación](../README.md#documentación).
 
 ## CLI — `php modux`
 
