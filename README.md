@@ -195,3 +195,25 @@ are indicative (single containerized host) and vary with hardware and workload.
 ## License
 
 MIT
+
+---
+
+## Contact
+
+**alexissaucedo@gmail.com** · [cynchrolabs.com.ar](https://www.cynchrolabs.com.ar)
+
+## Buy me a coffee?
+
+If Modux saved you time, consider a donation — it helps keep the project going.
+
+<a href="https://www.paypal.com/donate/?hosted_button_id=YX332RT7KSJ4Q">
+  <img src="https://img.shields.io/badge/PayPal-Donate-blue?logo=paypal" alt="Donate with PayPal"/>
+</a>
+
+---
+
+⭐ If you like this project, give it a star!
+
+<a href="https://github.com/cynchro/modux">
+  <img src="https://img.shields.io/github/stars/cynchro/modux?style=social" alt="GitHub stars"/>
+</a>

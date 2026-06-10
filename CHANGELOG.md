@@ -11,6 +11,8 @@ registro formal a partir de los cambios siguientes.
 
 ### Documentación
 
+- Secciones **Contact / Buy me a coffee / Star** (con badges de PayPal y GitHub) en el README,
+  la home del sitio (ES/EN) y —vía el README— el wiki.
 - Documentada la **instalación vía Packagist** con `composer create-project cynchro/modux`
   (el método recomendado para un skeleton `type: project`) en README y en la home del sitio
   (ES/EN). Corregidos dos bugs del Quick start: un `cd backend/src` obsoleto (ese directorio
