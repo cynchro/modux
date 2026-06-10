@@ -231,14 +231,16 @@ php modux queue:flush           # delete all failed jobs
 GET /health
 ```
 
-Returns 200 when DB is reachable, 503 when degraded:
+Checks dependencies with different severities: the **DB is critical** (if it fails →
+`status: down` + **HTTP 503**, takes the instance out of the load balancer); the **cache** is
+a degradation (rate limiting / anti-replay), reported but it does **not** change the status code.
 
 ```json
-{ "success": true, "data": { "status": "ok", "php": "8.2.0", "db": "ok" } }
+{ "success": true, "data": { "status": "ok", "php": "8.2.0", "checks": { "db": "ok", "cache": "ok" } } }
 ```
 
 ```json
-{ "success": true, "data": { "status": "degraded", "php": "8.2.0", "db": "unreachable" } }
+{ "success": true, "data": { "status": "down", "php": "8.2.0", "checks": { "db": "unreachable", "cache": "degraded" } } }
 ```
 
 Use this endpoint for load balancer health probes, uptime monitors, and deploy scripts.
@@ -267,6 +269,7 @@ Optional:
 | `JWT_REFRESH_TTL` | `604800` | Refresh token lifetime in seconds (7 days) |
 | `JWT_ALGO` | `HS256` | JWT signing algorithm |
 | `DB_PORT` | `3306` | Database port |
+| `DB_PERSISTENT` | `false` | Persistent PDO connections (better latency; tune `max_connections` before enabling) |
 | `LOG_CHANNEL` | `file` | `file` or `stderr` |
 | `LOG_LEVEL` | `debug` | Minimum log level to write |
 | `CORS_ALLOWED_ORIGINS` | _(none)_ | Comma-separated list of allowed origins |
