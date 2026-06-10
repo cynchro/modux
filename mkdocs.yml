@@ -5,7 +5,7 @@ repo_url: https://github.com/cynchro/modux
 repo_name: cynchro/modux
 edit_uri: edit/main/docs/
 copyright: >
-  Modux · hecho por <a href="https://cynchrolabs.com.ar/" target="_blank" rel="noopener">CynchroLabs</a> · MIT
+  Modux v2.0.1 · hecho por <a href="https://cynchrolabs.com.ar/" target="_blank" rel="noopener">CynchroLabs</a> · MIT
 
 docs_dir: docs
 
@@ -32,7 +32,7 @@ plugins:
           build: true
           site_description: A lightweight, dependency-injection-first PHP modular-monolith framework.
           copyright: >
-            Modux · made by <a href="https://cynchrolabs.com.ar/" target="_blank" rel="noopener">CynchroLabs</a> · MIT
+            Modux v2.0.1 · made by <a href="https://cynchrolabs.com.ar/" target="_blank" rel="noopener">CynchroLabs</a> · MIT
           theme:
             palette:
               - media: "(prefers-color-scheme: light)"
