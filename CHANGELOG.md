@@ -7,7 +7,7 @@ versionado es [SemVer](https://semver.org/lang/es/). Las versiones hasta la
 `v1.2.0` están en los tags de git y el historial; este archivo arranca el
 registro formal a partir de los cambios siguientes.
 
-## [Unreleased]
+## [2.1.0] - 2026-06-10
 
 ### Añadido
 
