@@ -19,28 +19,28 @@ php modux entitlements:roll-periods            Advance expired quota cycles (saf
 ```
 
 > Los comandos `queue:*` (worker de la cola de jobs) y `entitlements:roll-periods` (red de
-> seguridad de ciclos de cuota) se documentan en detalle en la página **Plataforma**
+> seguridad de ciclos de cuota) se documentan en detalle en la página **Platform**
 > — definición/despacho de jobs, el worker, jobs fallidos y el reseteo de cuotas vencidas.
 
 ### `make:module`
 
 ```bash
 php modux make:module Producto
-php modux make:module Factura --with-tenant   # repositorio con scope de tenant + TenantMiddleware
+php modux make:module Factura --with-tenant   # tenant-scoped repository + TenantMiddleware
 ```
 
-Genera `app/Modules/Producto/` con:
+Generates `app/Modules/Producto/` with:
 
 ```
 Controllers/ProductoController.php
-Repositories/ProductoRepository.php   (o la variante con scope de tenant)
+Repositories/ProductoRepository.php   (or tenant-scoped variant)
 Services/ProductoService.php
 Requests/CreateProductoRequest.php
 Requests/UpdateProductoRequest.php
-routes.php                            (o con TenantMiddleware)
+routes.php                            (or with TenantMiddleware)
 ```
 
-El módulo se **autodescubre** — `bootstrap/app.php` hace un glob de `app/Modules/*/routes.php` al arrancar. No hace falta registrarlo a mano. Opcionalmente, agregá `app/Modules/{Name}/ServiceProvider.php` — también se autodescubre.
+The module is **auto-discovered** — `bootstrap/app.php` globs `app/Modules/*/routes.php` at boot. No manual registration needed. Optionally add `app/Modules/{Name}/ServiceProvider.php` — it will also be auto-discovered.
 
 ### `make:migration`
 
@@ -49,7 +49,7 @@ php modux make:migration create_productos_table
 # → migrations/0002_create_productos_table.php
 ```
 
-Los archivos se numeran de forma secuencial. Cada uno devuelve una clase anónima con `up(PDO)` y `down(PDO)`.
+Files are numbered sequentially. Each file returns an anonymous class with `up(PDO)` and `down(PDO)`.
 
 ### `migrate`
 
@@ -59,18 +59,18 @@ php modux migrate
 
 ```
   migrated   0001_create_base_tables.php
-  skipped    0002_create_clientes_table.php   ← ya se ejecutó
+  skipped    0002_create_clientes_table.php   ← already ran
 
   1 migration(s) ran.
 ```
 
-Registra las migraciones aplicadas en una tabla `migrations` con un número de `batch`. Es seguro correrlo en cada deploy.
+Tracks ran migrations in a `migrations` table with a `batch` number. Safe to run on every deploy.
 
-### `migrate:rollback` y `migrate:fresh`
+### `migrate:rollback` and `migrate:fresh`
 
 ```bash
-php modux migrate:rollback   # deshace el último batch
-php modux migrate:fresh      # rollback de todo + re-ejecuta todo (deja el esquema limpio)
+php modux migrate:rollback   # undo last batch
+php modux migrate:fresh      # rollback all + re-run all (resets to clean state)
 ```
 
 ### `routes`
@@ -90,6 +90,7 @@ php modux routes
   GET       /health                     HealthController@check
 ```
 
-No requiere conexión a la base de datos.
+Does not require a database connection.
 
 ---
+

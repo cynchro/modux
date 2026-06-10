@@ -41,6 +41,19 @@ curl -X POST localhost:8080/auth/login \
 curl localhost:8080/health
 ```
 
+## Performance
+
+Medido sobre la imagen de producción (PHP 8.2 + Apache/mod_php, MySQL 8.0) con ApacheBench a
+concurrencia 50:
+
+| Endpoint | Qué mide | Req/s | p50 | p95 | p99 |
+|---|---|---|---|---|---|
+| `GET /` | Overhead del framework (routing + DI + pipeline) | ~3.520 | 13 ms | 21 ms | 27 ms |
+| `GET /health` | Framework + un round-trip `SELECT 1` | ~1.910 | 25 ms | 38 ms | 45 ms |
+
+Unos **0,28 ms de overhead de framework por request**, cero peticiones fallidas bajo carga.
+Los números son indicativos (un host containerizado) y varían con el hardware y la carga.
+
 ## Por dónde seguir
 
 - **[CLI](cli.md)** — `make:module`, `make:migration`, `migrate`, `routes`, `queue:*`…
@@ -50,4 +63,3 @@ curl localhost:8080/health
 - **[Infraestructura](infrastructure.md)** — config, logger, migraciones, **testing**.
 - **[Plataforma](platform.md)** — eventos, RBAC, entitlements, cuotas, cola de jobs.
 - **[Módulos opcionales](optional-modules.md)** — IA (LLM + RAG) y Billing (Stripe / Mercado Pago).
-- **[Arquitectura (ADR)](adr/0001-saas-identity-entitlements-billing.md)** — decisiones de la capa SaaS.

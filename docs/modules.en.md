@@ -1,28 +1,28 @@
 # Módulos, ruteo y secuencia de arranque
 
 
-## Secuencia de arranque
+## Boot sequence
 
-`bootstrap/app.php` arranca en 9 etapas ordenadas:
+`bootstrap/app.php` boots in 9 ordered stages:
 
-| Etapa | Qué pasa |
+| Stage | What happens |
 |---|---|
-| 1 | Carga `.env`, valida las variables requeridas |
-| 2 | Setea la ruta de config |
-| 3 | Setea el error reporting, desactiva display_errors |
-| 4 | Construye el Container PSR-11 |
-| 5 | Registra el singleton del Logger + el manejador global de excepciones |
-| 6 | Registra los singletons PDO, DB y CacheInterface (ApcuCache) |
-| 7 | Registra los singletons Router + Kernel |
-| 7.5 | Registra el EventDispatcher; autodescubre + arranca los ServiceProviders de los módulos |
-| 8 | Autodescubre los `routes.php` de los módulos |
-| 9 | Registra las rutas de infraestructura (health, logs) |
+| 1 | Load `.env`, enforce required vars |
+| 2 | Set config path |
+| 3 | Set error reporting, disable display_errors |
+| 4 | Build PSR-11 Container |
+| 5 | Register Logger singleton + global exception handler |
+| 6 | Register PDO, DB, and CacheInterface (ApcuCache) singletons |
+| 7 | Register Router + Kernel singletons |
+| 7.5 | Register EventDispatcher; auto-discover + boot module ServiceProviders |
+| 8 | Auto-discover module `routes.php` files |
+| 9 | Register infrastructure routes (health, logs) |
 
-La etapa 7.5 llama `register()` y luego `boot()` en cada `app/Modules/*/ServiceProvider.php` que exista. Ahí es donde los módulos se suscriben a eventos y sobrescriben bindings del container.
+Stage 7.5 calls `register()` then `boot()` on every `app/Modules/*/ServiceProvider.php` that exists. This is where modules subscribe to events and override container bindings.
 
 ---
 
-## Crear un módulo
+## Creating a module
 
 ### Repository
 
@@ -150,15 +150,15 @@ class ProductoServiceProvider extends ServiceProvider
 
 ---
 
-## Ruteo
+## Routing
 
-### Rutas individuales
+### Individual routes
 
 ```php
-// Pública
+// Public
 $router->post('/auth/login', [AuthController::class, 'login']);
 
-// Con middlewares
+// With middlewares
 $router->get('/productos/{id}', [ProductoController::class, 'show'],
     [AuthMiddleware::class]);
 
@@ -166,49 +166,49 @@ $router->delete('/productos/{id}', [ProductoController::class, 'delete'],
     [AuthMiddleware::class, AdminMiddleware::class]);
 ```
 
-### Grupos de rutas — comparten middlewares y prefijo de URI
+### Route groups — share middlewares and URI prefix
 
 ```php
-// Grupo por middleware
+// Middleware group
 $router->group([AuthMiddleware::class], function ($router) {
     $router->get('/productos',      [ProductoController::class, 'index']);
     $router->post('/productos',     [ProductoController::class, 'create']);
     $router->put('/productos/{id}', [ProductoController::class, 'update']);
 });
 
-// Grupo con prefijo — a todas las rutas se les antepone /v1
+// Prefix group — all routes get /v1 prepended
 $router->group([AuthMiddleware::class], '/v1', function ($router) {
     $router->get('/productos', [ProductoController::class, 'index']); // → GET /v1/productos
 });
 
-// Grupos anidados — los middlewares y prefijos se combinan, no se reemplazan
+// Nested groups — middlewares and prefixes are merged, not replaced
 $router->group([AuthMiddleware::class], function ($router) {
     $router->group([AdminMiddleware::class], function ($router) {
         $router->get('/admin/roles', [AdminController::class, 'roles']);
     });
 });
 
-// Middleware parametrizado — chequeo de permiso RBAC
+// Parameterized middleware — RBAC permission check
 $router->delete('/productos/{id}', [ProductoController::class, 'delete'], [
     AuthMiddleware::class,
     PermissionMiddleware::class . ':productos.delete',
 ]);
 ```
 
-Los parámetros de ruta se extraen automáticamente y están disponibles vía `$request->route('id')`.
+Route parameters are extracted automatically and available via `$request->route('id')`.
 
-### Inyección en controllers
+### Controller injection
 
-El router resuelve los parámetros de los métodos del controller por tipo:
+The router resolves controller method parameters by type:
 
-| Tipo del parámetro | Qué se inyecta |
+| Parameter type | What gets injected |
 |---|---|
-| `Request` | La petición actual (con `user()`, `tenantId()`, params de ruta ya seteados) |
-| Subclase de `FormRequest` | Una instancia nueva construida desde `$request->all() + routeParams()` — validada al construirse |
-| Cualquier otra clase | Se resuelve desde el container |
-| Escalar (sin tipo) | `$request->route($paramName)` |
+| `Request` | The current request (with `user()`, `tenantId()`, route params already set) |
+| Subclass of `FormRequest` | A new instance constructed from `$request->all() + routeParams()` — validated on construction |
+| Any other class | Resolved from the container |
+| Scalar (untyped) | `$request->route($paramName)` |
 
-**Patrón de doble parámetro** — usalo cuando necesitás tanto el contexto de la petición (tenantId, user) como un FormRequest validado:
+**Dual-parameter pattern** — use when you need both the request context (tenantId, user) and a validated FormRequest:
 
 ```php
 public function create(Request $request, CreateProductoRequest $validated): Response
@@ -219,3 +219,4 @@ public function create(Request $request, CreateProductoRequest $validated): Resp
 ```
 
 ---
+
