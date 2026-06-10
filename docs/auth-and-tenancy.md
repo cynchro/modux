@@ -1,7 +1,7 @@
 # Auth, API keys, webhooks, DI y multi-tenancy
 
 
-## Authentication
+## Autenticación
 
 ### Login
 
@@ -12,11 +12,11 @@ Content-Type: application/json
 {"usuario": "email@example.com", "clave": "password"}
 ```
 
-Returns `access_token` (JWT) and `refresh_token` (opaque, stored in DB).
+Devuelve `access_token` (JWT) y `refresh_token` (opaco, guardado en DB).
 
-The JWT payload contains `sub` (user ID), `tenant_id`, and expiry. Default TTL: 86400 seconds (configurable via `JWT_TTL`).
+El payload del JWT contiene `sub` (ID de usuario), `tenant_id` y expiración. TTL por defecto: 86400 segundos (configurable vía `JWT_TTL`).
 
-### Token refresh
+### Refresh de token
 
 ```
 POST /auth/refresh
@@ -25,7 +25,7 @@ Content-Type: application/json
 {"refresh_token": "a8f3c1d9..."}
 ```
 
-Issues a new `access_token` + `refresh_token` pair. The old refresh token is deleted immediately (rotation — each token is single-use).
+Emite un nuevo par `access_token` + `refresh_token`. El refresh token viejo se borra de inmediato (rotación — cada token es de un solo uso).
 
 ### Logout
 
@@ -34,10 +34,10 @@ POST /auth/logout
 Authorization: Bearer <access_token>
 Content-Type: application/json
 
-{"refresh_token": "a8f3c1d9..."}   ← optional, also invalidates refresh token
+{"refresh_token": "a8f3c1d9..."}   ← opcional, también invalida el refresh token
 ```
 
-### Impersonation (admin only)
+### Impersonación (solo admin)
 
 ```
 POST /auth/impersonate
@@ -47,82 +47,82 @@ Content-Type: application/json
 {"target_id": 42}
 ```
 
-- Requires `AuthMiddleware + AdminMiddleware + TenantMiddleware`
-- Admin can only impersonate users within their own tenant
-- Returns a JWT signed as the target user
+- Requiere `AuthMiddleware + AdminMiddleware + TenantMiddleware`
+- El admin solo puede suplantar usuarios dentro de su propio tenant
+- Devuelve un JWT firmado como el usuario objetivo
 
 ### Rate limiting
 
-Login attempts are tracked per username using APCu. After 5 failed attempts the account is locked for 5 minutes (`RateLimitException` → 429). If APCu is not installed, rate limiting is silently skipped.
+Los intentos de login se trackean por usuario usando APCu. Tras 5 intentos fallidos la cuenta queda bloqueada 5 minutos (`RateLimitException` → 429). Si APCu no está instalado, el rate limiting se saltea silenciosamente.
 
-### Authenticated request
+### Petición autenticada
 
 ```
 GET /any-protected-route
 Authorization: Bearer <access_token>
 ```
 
-`AuthMiddleware` resolves the request through **guards** (JWT first, then API
-key) and produces a unified `Principal`. For backward compatibility it still
-calls `$request->setUser($payload)`, so `$request->user()`,
-`TenantMiddleware` and `PermissionMiddleware` work unchanged. Use
-`$request->principal()` to read the auth type, tenant and scopes.
+`AuthMiddleware` resuelve la petición a través de **guards** (JWT primero, luego API
+key) y produce un `Principal` unificado. Por retrocompatibilidad sigue llamando
+`$request->setUser($payload)`, así que `$request->user()`,
+`TenantMiddleware` y `PermissionMiddleware` funcionan sin cambios. Usá
+`$request->principal()` para leer el tipo de auth, el tenant y los scopes.
 
-### API keys (third-party auth)
+### API keys (auth de terceros)
 
-For server-to-server access by external developers, the same protected routes
-accept an **API key** instead of a user JWT — no code change on the route:
+Para acceso server-to-server por desarrolladores externos, las mismas rutas protegidas
+aceptan una **API key** en vez de un JWT de usuario — sin cambiar el código de la ruta:
 
 ```
 GET /any-protected-route
-Authorization: Bearer mk_live_<id>_<secret>     # or: X-Api-Key: mk_live_...
+Authorization: Bearer mk_live_<id>_<secret>     # o: X-Api-Key: mk_live_...
 ```
 
-Keys are issued with `App\Support\Auth\ApiKeyManager::issue($tenantId, $name, $scopes)`,
-which returns the token **once** (only `prefix` + a SHA-256 `hash` are stored).
+Las keys se emiten con `App\Support\Auth\ApiKeyManager::issue($tenantId, $name, $scopes)`,
+que devuelve el token **una sola vez** (solo se guardan `prefix` + un `hash` SHA-256).
 
-Tenants manage their own keys through the built-in `ApiKeys` module (CRUD):
+Los tenants gestionan sus propias keys con el módulo `ApiKeys` incluido (CRUD):
 
 ```
-POST   /api-keys          { "name": "...", "scopes": ["clientes.read"] }  → 201, token shown once
-GET    /api-keys                                                          → list (never exposes hash)
-GET    /api-keys/{id}                                                     → one key's metadata
-DELETE /api-keys/{id}                                                     → revoke
+POST   /api-keys          { "name": "...", "scopes": ["clientes.read"] }  → 201, token visible una vez
+GET    /api-keys                                                          → lista (nunca expone el hash)
+GET    /api-keys/{id}                                                     → metadata de una key
+DELETE /api-keys/{id}                                                     → revocar
 ```
 
-These routes require `AuthMiddleware + TenantMiddleware + ScopeMiddleware:apikeys.manage`,
-so app users (scope `*`) manage keys transparently, while an API key can only
-administer others if explicitly granted `apikeys.manage` (prevents privilege
-escalation). Every operation is scoped to the caller's tenant.
+Estas rutas requieren `AuthMiddleware + TenantMiddleware + ScopeMiddleware:apikeys.manage`,
+así que los usuarios de la app (scope `*`) gestionan keys de forma transparente, mientras que
+una API key solo puede administrar otras si se le concedió explícitamente `apikeys.manage`
+(previene la escalada de privilegios). Toda operación queda acotada al tenant del que llama.
 
-The key carries its tenant and a list of **scopes**; guard against them per route
-with the parametrized middleware:
+La key lleva su tenant y una lista de **scopes**; protegé por ellos en cada ruta
+con el middleware parametrizado:
 
 ```php
 $router->get('/clientes', [ClienteController::class, 'index'],
     [AuthMiddleware::class, TenantMiddleware::class, 'App\Http\Middleware\ScopeMiddleware:clientes.read']);
 ```
 
-Scopes (what a credential may touch) are orthogonal to RBAC permissions (what a
-user role may do) and to tenant entitlements (what a tenant has) — see
+Los scopes (qué puede tocar una credencial) son ortogonales a los permisos RBAC (qué puede
+hacer un rol de usuario) y a los entitlements del tenant (qué tiene un tenant) — ver
 `docs/adr/0001-saas-identity-entitlements-billing.md`.
 
-### Webhook signatures
+### Firmas de webhooks
 
-`App\Support\Webhook\WebhookVerifier` (bound to `WebhookVerifierInterface`) hardens
-inbound/outbound webhooks with a dependency-free scheme:
+`App\Support\Webhook\WebhookVerifier` (vinculado a `WebhookVerifierInterface`) endurece los
+webhooks entrantes/salientes con un esquema propio sin dependencias:
 
 ```
 X-Signature: t=<unix_ts>,v1=<hex_hmac_sha256>
 signature  = HMAC-SHA256("<ts>.<rawBody>", secret)
 ```
 
-`verify($request, $secret, $tolerance = 300)` returns true only if the HMAC matches
-(constant-time), the timestamp is within the window, **and** the signature hasn't been
-seen before (anti-replay via `CacheInterface`, TTL = window). `sign($payload, $secret)`
-produces the header for outbound webhooks. Inject the interface in any controller that
-receives provider callbacks (e.g. payment gateways) and verify against that integration's
-secret before acting. Reading the raw body relies on `Request::rawBody()`.
+`verify($request, $secret, $tolerance = 300)` devuelve true solo si el HMAC coincide
+(en tiempo constante), el timestamp está dentro de la ventana **y** la firma no se vio
+antes (anti-replay vía `CacheInterface`, TTL = ventana). `sign($payload, $secret)`
+produce la cabecera para webhooks salientes. Inyectá la interfaz en cualquier controller que
+reciba callbacks de proveedores (p. ej. pasarelas de pago) y verificá contra el secret de esa
+integración antes de actuar. La lectura del body crudo usa `Request::rawBody()`.
 
 **El anti-replay exige un store operativo.** El nonce vive en `CacheInterface`, cuyo binding
 por defecto es `ApcuCache`. Si el cache no es operativo (`available() === false`, p. ej. APCu
@@ -134,48 +134,48 @@ cambia. Ver `docs/adr/0001-saas-identity-entitlements-billing.md` §1.3.
 
 ---
 
-## DI Container
+## Container de DI
 
-PSR-11 compliant with reflection-based autowiring.
+Compatible con PSR-11, con autowiring por reflexión.
 
 ```php
-// Register a factory
+// Registrar un factory
 $app->bind(MyService::class, fn ($c) => new MyService($c->get(PDO::class)));
 
-// Register a singleton (resolved once, reused)
+// Registrar un singleton (se resuelve una vez, se reutiliza)
 $app->singleton(MyService::class, fn ($c) => new MyService($c->get(PDO::class)));
 
-// Register a pre-built instance
+// Registrar una instancia ya construida
 $app->instance(\PDO::class, $existingPdo);
 
-// Resolve
+// Resolver
 $service = $app->get(MyService::class);
 
-// Autowire without registration (uses reflection)
+// Autowiring sin registro (usa reflexión)
 $service = $app->make(MyService::class);
 
-// Autowire and inject extra scalar params into builtin constructor parameters
+// Autowiring + inyectar escalares extra en parámetros builtin del constructor
 $middleware = $app->makeWith(PermissionMiddleware::class, 'facturas.delete');
 ```
 
-Autowiring resolves constructor parameters by type name. If no binding exists for a type, it recursively resolves the class. Scalar parameters without defaults throw `ContainerException`. `makeWith` injects additional scalars positionally into builtin-typed parameters — used internally by the Router for parameterized middlewares.
+El autowiring resuelve los parámetros del constructor por nombre de tipo. Si no hay binding para un tipo, resuelve la clase recursivamente. Los parámetros escalares sin default lanzan `ContainerException`. `makeWith` inyecta escalares adicionales de forma posicional en los parámetros de tipo builtin — lo usa internamente el Router para los middlewares parametrizados.
 
 ---
 
 ## Multi-tenancy
 
-The framework ships with row-level multi-tenancy. It is **opt-in** — if you don't include `TenantMiddleware` on a route, tenantId is never set and no tenant scoping happens.
+El framework trae multi-tenancy a nivel de fila. Es **opt-in** — si no incluís `TenantMiddleware` en una ruta, el tenantId nunca se setea y no hay scoping por tenant.
 
-### How it works
+### Cómo funciona
 
-1. The `usuarios` table has a `tenant_id CHAR(36)` column (FK → `tenants.id`)
-2. On login, `tenant_id` is embedded in the JWT payload
-3. `TenantMiddleware` reads `tenant_id` from the decoded JWT and calls `$request->setTenantId()`
-4. Controllers read `$request->tenantId()` and pass it down to repositories
-5. Repositories add `AND tenant_id = ?` to their queries when `$tenantId !== null`
+1. La tabla `usuarios` tiene una columna `tenant_id CHAR(36)` (FK → `tenants.id`)
+2. En el login, el `tenant_id` se embebe en el payload del JWT
+3. `TenantMiddleware` lee el `tenant_id` del JWT decodificado y llama `$request->setTenantId()`
+4. Los controllers leen `$request->tenantId()` y lo pasan a los repositorios
+5. Los repositorios agregan `AND tenant_id = ?` a sus queries cuando `$tenantId !== null`
 
 ```php
-// Route — add TenantMiddleware to enable scoping
+// Ruta — agregá TenantMiddleware para habilitar el scoping
 $router->group([AuthMiddleware::class, TenantMiddleware::class], function ($router) {
     $router->get('/productos', [ProductoController::class, 'index']);
 });
@@ -190,7 +190,7 @@ public function index(Request $request): Response
 ```
 
 ```php
-// Repository — conditional scoping
+// Repository — scoping condicional
 public function findAll(?string $tenantId = null): array
 {
     $sql    = 'SELECT * FROM productos';
@@ -207,13 +207,12 @@ public function findAll(?string $tenantId = null): array
 }
 ```
 
-### Running without multi-tenancy
+### Correr sin multi-tenancy
 
-Simply don't add `TenantMiddleware` to any route. The `tenant_id` column in `usuarios` can be omitted. Repositories receive `null` and skip the tenant filter. No other changes needed.
+Simplemente no agregues `TenantMiddleware` a ninguna ruta. La columna `tenant_id` en `usuarios` se puede omitir. Los repositorios reciben `null` y saltean el filtro de tenant. No hace falta ningún otro cambio.
 
-### Admin impersonation across tenants
+### Impersonación de admin entre tenants
 
-An admin can only impersonate users within their own tenant. Attempting cross-tenant impersonation throws `AuthException(403)`. Passing `$adminTenantId = null` skips this check (internal use only — the route always passes the real tenant ID via `TenantMiddleware`).
+Un admin solo puede suplantar usuarios dentro de su propio tenant. Intentar una suplantación cross-tenant lanza `AuthException(403)`. Pasar `$adminTenantId = null` saltea este chequeo (uso interno solamente — la ruta siempre pasa el tenant ID real vía `TenantMiddleware`).
 
 ---
-

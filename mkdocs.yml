@@ -12,6 +12,32 @@ docs_dir: docs
 # El sitio se arma solo desde la doc de usuario; lo interno queda fuera.
 exclude_docs: |
   memory/
+  adr/
+
+# Sitio bilingüe (español por defecto, inglés alterno). Estructura por sufijo:
+#   page.md     → español (idioma por defecto)
+#   page.en.md  → inglés
+plugins:
+  - search:
+      lang: [es, en]
+  - i18n:
+      docs_structure: suffix
+      languages:
+        - locale: es
+          default: true
+          name: Español
+          build: true
+        - locale: en
+          name: English
+          build: true
+          site_description: A lightweight, dependency-injection-first PHP modular-monolith framework.
+          nav_translations:
+            Inicio: Home
+            Módulos y ruteo: Modules & Routing
+            Auth y multi-tenancy: Auth & Multi-tenancy
+            Infraestructura: Infrastructure
+            Plataforma: Platform
+            Módulos opcionales: Optional Modules
 
 theme:
   name: material
@@ -39,7 +65,6 @@ theme:
         icon: material/weather-sunny
         name: Modo claro
   features:
-    - navigation.instant
     - navigation.tracking
     - navigation.top
     - navigation.sections
@@ -82,4 +107,3 @@ nav:
   - Infraestructura: infrastructure.md
   - Plataforma: platform.md
   - Módulos opcionales: optional-modules.md
-  - Arquitectura (ADR): adr/0001-saas-identity-entitlements-billing.md

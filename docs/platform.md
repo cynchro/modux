@@ -1,34 +1,34 @@
 # Eventos, RBAC, entitlements, jobs, health y variables de entorno
 
 
-## Events
+## Eventos
 
-`EventDispatcher` provides a synchronous in-process event bus. Inject it anywhere via the container.
+`EventDispatcher` provee un bus de eventos síncrono in-process. Inyectalo donde sea vía el container.
 
 ```php
-// Subscribe in ServiceProvider::boot()
+// Suscribirse en ServiceProvider::boot()
 $dispatcher->listen('usuario.created', function (array $payload): void {
-    // send welcome email, log audit trail, etc.
+    // enviar email de bienvenida, registrar auditoría, etc.
     // $payload = ['id' => 42, 'email' => 'user@example.com']
 });
 
-// Dispatch from a Service
+// Despachar desde un Service
 $this->dispatcher->dispatch('usuario.created', [
     'id'    => $id,
     'email' => $data['email'],
 ]);
 
-// Check if anyone is listening
+// Chequear si hay alguien escuchando
 $dispatcher->hasListeners('usuario.created'); // bool
 ```
 
-Events are synchronous — the caller waits for all listeners to finish. For fire-and-forget behaviour wrap the listener body in a `try/catch`.
+Los eventos son síncronos — quien dispara espera a que terminen todos los listeners. Para un comportamiento fire-and-forget, envolvé el cuerpo del listener en un `try/catch`.
 
 ---
 
-## RBAC — permission-based access control
+## RBAC — control de acceso por permisos
 
-Assign permission keys to roles via the `roles_permisos` table (each row links a `rol_id` to a `permiso_id`). Use `PermissionMiddleware` on routes that require a specific permission:
+Asigná claves de permiso a roles vía la tabla `roles_permisos` (cada fila vincula un `rol_id` con un `permiso_id`). Usá `PermissionMiddleware` en las rutas que requieren un permiso específico:
 
 ```php
 use App\Http\Middleware\PermissionMiddleware;
@@ -40,21 +40,21 @@ $router->group([AuthMiddleware::class, TenantMiddleware::class], function ($rout
 });
 ```
 
-The middleware throws `ForbiddenException` (403) if the authenticated user's role does not have the requested permission. `AdminMiddleware` still covers simple admin-only gates; use `PermissionMiddleware` for fine-grained per-operation control.
+El middleware lanza `ForbiddenException` (403) si el rol del usuario autenticado no tiene el permiso pedido. `AdminMiddleware` sigue cubriendo los gates simples de solo-admin; usá `PermissionMiddleware` para un control fino por operación.
 
 ---
 
-## Entitlements — tenant feature gating
+## Entitlements — gating de features por tenant
 
-Entitlements answer "**what does this tenant have?**" — which modules/features, how many
-seats, what quotas — independently of who the user is (RBAC) or what a credential may touch
-(scopes). They live in `tenant_entitlements` and are read through
+Los entitlements responden "**qué tiene este tenant?**" — qué módulos/features, cuántos
+asientos, qué cuotas — independientemente de quién es el usuario (RBAC) o qué puede tocar una
+credencial (scopes). Viven en `tenant_entitlements` y se leen a través de
 `EntitlementResolverInterface` (`App\Support\Entitlements\DbEntitlementResolver`).
 
-Three types: `flag` (has / hasn't), `quota` (numeric limit per cycle), `seat` (seats).
-`limit_value` null = unlimited. Features are namespaced (`ia.rag`, `bots.outbound`).
+Tres tipos: `flag` (tiene / no tiene), `quota` (límite numérico por ciclo), `seat` (asientos).
+`limit_value` null = ilimitado. Las features son namespaced (`ia.rag`, `bots.outbound`).
 
-Gate a route with the parametrized middleware (after `TenantMiddleware`):
+Protegé una ruta con el middleware parametrizado (después de `TenantMiddleware`):
 
 ```php
 $router->post('/ia/ask', [IAController::class, 'ask'],
@@ -62,57 +62,57 @@ $router->post('/ia/ask', [IAController::class, 'ask'],
      EntitlementMiddleware::class . ':ia.rag']);
 ```
 
-Missing/disabled feature → **402 Payment Required** (an actionable "upgrade your plan"
-signal, distinct from 403). In code:
+Feature ausente/deshabilitada → **402 Payment Required** (una señal accionable de "mejorá tu
+plan", distinta de 403). En código:
 
 ```php
 $set = $resolver->for($tenantId);
 $set->allows('ia.rag');             // bool (flag / gating)
-$set->limit('api.calls');           // ?int (null = unlimited)
-$set->remaining('api.calls', $used);// ?int, used passed in (no I/O in the value object)
+$set->limit('api.calls');           // ?int (null = ilimitado)
+$set->remaining('api.calls', $used);// ?int, `used` se pasa (sin I/O en el value object)
 ```
 
-**The base only reads `tenant_entitlements`.** It's populated by the optional billing
-module (`source = 'billing:*'`) or by hand (`source = 'manual'`) — so product modules
-(e.g. `modux-ia`) never depend on billing.
+**El base solo lee `tenant_entitlements`.** Lo puebla el módulo opcional de billing
+(`source = 'billing:*'`) o se carga a mano (`source = 'manual'`) — así los módulos de producto
+(p. ej. `modux-ia`) nunca dependen de billing.
 
-### Usage metering & quotas
+### Metering de uso y cuotas
 
-Record usage via `UsageRecorderInterface` (`App\Support\Usage\DbUsageRecorder`, table
-`usage_events`). Recording is **explicit** — the consuming code decides the cost per call:
+Registrá el uso vía `UsageRecorderInterface` (`App\Support\Usage\DbUsageRecorder`, tabla
+`usage_events`). El registro es **explícito** — el código que consume decide el costo por llamada:
 
 ```php
-$usage->record($tenantId, 'api.calls', 1, $idempotencyKey);  // idempotency_key dedupes retries
+$usage->record($tenantId, 'api.calls', 1, $idempotencyKey);  // idempotency_key deduplica reintentos
 $usage->record($tenantId, 'ia.tokens', $tokensUsed);
 ```
 
-`QuotaMiddleware:<feature>` enforces the limit (after `TenantMiddleware`). It counts
-`usage_events` from the entitlement's `period_start` (or the calendar month start when there's
-no billing) and compares against the limit:
+`QuotaMiddleware:<feature>` aplica el límite (después de `TenantMiddleware`). Cuenta los
+`usage_events` desde el `period_start` del entitlement (o el inicio del mes calendario cuando no
+hay billing) y compara contra el límite:
 
 ```php
 $router->post('/ia/ask', [IAController::class, 'ask'],
     [AuthMiddleware::class, TenantMiddleware::class, QuotaMiddleware::class . ':api.calls']);
 ```
 
-- no entitlement / disabled → **402**, unlimited (`limit_value` null) → passes,
-- quota exhausted → **429** with `Retry-After` (seconds until the cycle resets).
+- sin entitlement / deshabilitado → **402**, ilimitado (`limit_value` null) → pasa,
+- cuota agotada → **429** con `Retry-After` (segundos hasta que se resetea el ciclo).
 
-Quota cycles are anchored to the subscription's `period_start/period_end` (denormalized into
-`tenant_entitlements` by billing). Moving the window resets the quota **without deleting**
-`usage_events` (kept for audit/rating). As a safety net for missed renewals:
+Los ciclos de cuota se anclan al `period_start/period_end` de la suscripción (denormalizados en
+`tenant_entitlements` por billing). Mover la ventana resetea la cuota **sin borrar** los
+`usage_events` (se conservan para auditoría/rating). Como red de seguridad ante renovaciones perdidas:
 
 ```bash
-php modux entitlements:roll-periods   # advances expired quota cycles by their own span; idempotent
+php modux entitlements:roll-periods   # avanza los ciclos de cuota vencidos por su propio span; idempotente
 ```
 
-See `docs/adr/0001-saas-identity-entitlements-billing.md` for the full design.
+Ver `docs/adr/0001-saas-identity-entitlements-billing.md` para el diseño completo.
 
 ---
 
-## Database transactions
+## Transacciones de base de datos
 
-`App\Support\DB` wraps operations in a PDO transaction with automatic rollback on any exception:
+`App\Support\DB` envuelve operaciones en una transacción PDO con rollback automático ante cualquier excepción:
 
 ```php
 class FacturaService
@@ -136,15 +136,15 @@ class FacturaService
 }
 ```
 
-Inject `DB` in any service; the container auto-wires it with the registered PDO singleton.
+Inyectá `DB` en cualquier service; el container lo autoconecta con el singleton de PDO registrado.
 
 ---
 
-## Job queue
+## Cola de jobs
 
-DB-backed async queue. Jobs are stored in a `jobs` table and processed by a worker process. Multiple workers can run in parallel — claiming is done with an atomic UUID `UPDATE`.
+Cola asíncrona respaldada por DB. Los jobs se guardan en una tabla `jobs` y los procesa un proceso worker. Pueden correr varios workers en paralelo — el claim se hace con un `UPDATE` atómico por UUID.
 
-### Defining a job
+### Definir un job
 
 ```php
 namespace App\Modules\Notificaciones\Jobs;
@@ -156,7 +156,7 @@ class SendWelcomeEmailJob extends Job
 {
     public string $email = '';
     public string $name  = '';
-    public string $queue = 'emails';   // override the default queue
+    public string $queue = 'emails';   // sobrescribe la cola por defecto
 
     public function handle(Container $container): void
     {
@@ -165,12 +165,12 @@ class SendWelcomeEmailJob extends Job
 }
 ```
 
-Public properties (except the framework-reserved `queue`, `maxAttempts`, `delaySeconds`) are serialized as JSON payload in the DB. Service dependencies are resolved from the Container when `handle()` runs.
+Las propiedades públicas (excepto las reservadas por el framework `queue`, `maxAttempts`, `delaySeconds`) se serializan como payload JSON en la DB. Las dependencias de servicios se resuelven desde el Container cuando corre `handle()`.
 
-### Dispatching
+### Despachar
 
 ```php
-// Inject JobDispatcher in any service constructor
+// Inyectá JobDispatcher en el constructor de cualquier service
 public function __construct(private JobDispatcher $dispatcher) {}
 
 $job        = new SendWelcomeEmailJob();
@@ -178,50 +178,50 @@ $job->email = $data['email'];
 $job->name  = $data['nombre'];
 $this->dispatcher->dispatch($job);
 
-// Dispatch with a delay (seconds before the job becomes available)
+// Despachar con delay (segundos antes de que el job quede disponible)
 $job->delaySeconds = 300;
 $this->dispatcher->dispatch($job);
 ```
 
-### Running the worker
+### Correr el worker
 
 ```bash
-php modux queue:work                           # process 'default' queue, sleep 3s between polls
-php modux queue:work --queue=emails            # process a specific queue
-php modux queue:work --queue=emails --sleep=5  # custom sleep interval
-php modux queue:work --once                    # process one job then exit (useful for cron)
-php modux queue:work --timeout=10              # release jobs stuck > 10 minutes
+php modux queue:work                           # procesa la cola 'default', duerme 3s entre polls
+php modux queue:work --queue=emails            # procesa una cola específica
+php modux queue:work --queue=emails --sleep=5  # intervalo de sleep custom
+php modux queue:work --once                    # procesa un job y sale (útil para cron)
+php modux queue:work --timeout=10              # libera jobs trabados > 10 minutos
 ```
 
-SIGINT / SIGTERM (Ctrl-C) triggers a graceful shutdown — the worker finishes the current job before stopping.
+SIGINT / SIGTERM (Ctrl-C) dispara un apagado ordenado — el worker termina el job actual antes de detenerse.
 
-For production, manage the worker with **supervisord** or **systemd** so it restarts automatically if it crashes.
+En producción, gestioná el worker con **supervisord** o **systemd** para que se reinicie automáticamente si se cae.
 
-### Failed jobs
-        
-On failure the job is retried up to `maxAttempts` times (default 3) with exponential back-off: `2^attempts` seconds between retries. After the last attempt the job row is marked `status = 'failed'` with the full error message stored.
+### Jobs fallidos
+
+Al fallar, el job se reintenta hasta `maxAttempts` veces (3 por defecto) con back-off exponencial: `2^attempts` segundos entre reintentos. Tras el último intento, la fila del job se marca `status = 'failed'` con el mensaje de error completo guardado.
 
 ```bash
-php modux queue:failed          # list all failed jobs
-php modux queue:retry 42        # reset job #42 to 'pending' so the worker picks it up again
-php modux queue:flush           # delete all failed jobs
+php modux queue:failed          # lista todos los jobs fallidos
+php modux queue:retry 42        # resetea el job #42 a 'pending' para que el worker lo retome
+php modux queue:flush           # borra todos los jobs fallidos
 ```
 
-### `jobs` table schema
+### Esquema de la tabla `jobs`
 
-| Column | Type | Description |
+| Columna | Tipo | Descripción |
 |---|---|---|
-| `id` | INT AUTO_INCREMENT | Primary key |
-| `queue` | VARCHAR(100) | Queue name |
-| `payload` | MEDIUMTEXT | JSON-serialized class + data |
-| `attempts` | INT | How many times the worker tried |
-| `max_attempts` | INT | Copied from Job at dispatch time |
+| `id` | INT AUTO_INCREMENT | Clave primaria |
+| `queue` | VARCHAR(100) | Nombre de la cola |
+| `payload` | MEDIUMTEXT | Clase + datos serializados en JSON |
+| `attempts` | INT | Cuántas veces lo intentó el worker |
+| `max_attempts` | INT | Copiado del Job al despachar |
 | `status` | ENUM | `pending`, `running`, `failed` |
-| `available_at` | DATETIME | When the job becomes eligible (supports delay) |
-| `reserved_at` | DATETIME | When a worker claimed it |
-| `reserved_by` | CHAR(36) | UUID of the worker that claimed it (atomic lock) |
-| `failed_at` | DATETIME | When the job was finally marked failed |
-| `error` | TEXT | Exception message + trace |
+| `available_at` | DATETIME | Cuándo queda elegible el job (soporta delay) |
+| `reserved_at` | DATETIME | Cuándo lo reclamó un worker |
+| `reserved_by` | CHAR(36) | UUID del worker que lo reclamó (lock atómico) |
+| `failed_at` | DATETIME | Cuándo se marcó finalmente como fallido |
+| `error` | TEXT | Mensaje de la excepción + trace |
 
 ---
 
@@ -231,7 +231,7 @@ php modux queue:flush           # delete all failed jobs
 GET /health
 ```
 
-Returns 200 when DB is reachable, 503 when degraded:
+Devuelve 200 cuando la DB es alcanzable, 503 cuando está degradado:
 
 ```json
 { "success": true, "data": { "status": "ok", "php": "8.2.0", "db": "ok" } }
@@ -241,36 +241,35 @@ Returns 200 when DB is reachable, 503 when degraded:
 { "success": true, "data": { "status": "degraded", "php": "8.2.0", "db": "unreachable" } }
 ```
 
-Use this endpoint for load balancer health probes, uptime monitors, and deploy scripts.
+Usá este endpoint para los health probes del load balancer, monitores de uptime y scripts de deploy.
 
 ---
 
-## Environment variables
+## Variables de entorno
 
-Copy `.env.example` → `.env`. Required at boot (missing variables throw immediately):
+Copiá `.env.example` → `.env`. Requeridas al arrancar (las variables faltantes lanzan de inmediato):
 
-| Variable | Description |
+| Variable | Descripción |
 |---|---|
-| `JWT_SECRET` | Min 32 chars. Generate: `php -r "echo bin2hex(random_bytes(32));"` |
-| `DB_HOST` | Database host |
-| `DB_NAME` | Database name |
-| `DB_USER` | Database user |
-| `DB_PASS` | Database password |
+| `JWT_SECRET` | Mín. 32 chars. Generá: `php -r "echo bin2hex(random_bytes(32));"` |
+| `DB_HOST` | Host de la base de datos |
+| `DB_NAME` | Nombre de la base de datos |
+| `DB_USER` | Usuario de la base de datos |
+| `DB_PASS` | Contraseña de la base de datos |
 
-Optional:
+Opcionales:
 
-| Variable | Default | Description |
+| Variable | Default | Descripción |
 |---|---|---|
 | `APP_ENV` | `local` | `local` / `production` |
-| `APP_DEBUG` | `false` | Expose exception details in JSON responses |
-| `JWT_TTL` | `86400` | Access token lifetime in seconds |
-| `JWT_REFRESH_TTL` | `604800` | Refresh token lifetime in seconds (7 days) |
-| `JWT_ALGO` | `HS256` | JWT signing algorithm |
-| `DB_PORT` | `3306` | Database port |
-| `LOG_CHANNEL` | `file` | `file` or `stderr` |
-| `LOG_LEVEL` | `debug` | Minimum log level to write |
-| `CORS_ALLOWED_ORIGINS` | _(none)_ | Comma-separated list of allowed origins |
-| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM` | — | SMTP credentials for `EmailHelper` |
+| `APP_DEBUG` | `false` | Expone el detalle de excepciones en las respuestas JSON |
+| `JWT_TTL` | `86400` | Vida del access token en segundos |
+| `JWT_REFRESH_TTL` | `604800` | Vida del refresh token en segundos (7 días) |
+| `JWT_ALGO` | `HS256` | Algoritmo de firma del JWT |
+| `DB_PORT` | `3306` | Puerto de la base de datos |
+| `LOG_CHANNEL` | `file` | `file` o `stderr` |
+| `LOG_LEVEL` | `debug` | Nivel mínimo de log a escribir |
+| `CORS_ALLOWED_ORIGINS` | _(ninguno)_ | Lista de orígenes permitidos separados por coma |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM` | — | Credenciales SMTP para `EmailHelper` |
 
 ---
-

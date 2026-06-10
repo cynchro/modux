@@ -25,6 +25,18 @@ registro formal a partir de los cambios siguientes.
   `docs/assets/extra.css`), header con degradé navy→teal y el logo en blanco para leer encima;
   tipografías Inter + JetBrains Mono; footer firmado por
   [CynchroLabs](https://cynchrolabs.com.ar/) (+ iconos sociales).
+- **Sitio de docs bilingüe (español por defecto + inglés) con selector de idioma**
+  (`mkdocs-static-i18n`). Estructura por sufijo: `page.md` (es) + `page.en.md` (en); nav y UI
+  traducidos por idioma. Resuelve el "spanglish" (menú ES + contenido EN). El wiki sigue en
+  inglés (lee las variantes `*.en.md`).
+
+### Cambiado
+
+- **Quitada la comparación "Why not Laravel?"** del README; reemplazada por una sección
+  **Performance** con datos reales de benchmark (sin comparaciones con otros frameworks):
+  `GET /` ~3.520 req/s (≈0,28 ms de overhead/req), `GET /health` ~1.910 req/s, p50/p95/p99 y
+  0 fallos — medido sobre la imagen de producción (PHP 8.2 + Apache, MySQL 8) con ApacheBench.
+  El benchmark también figura en la home del sitio de docs.
 
 ### Documentación
 

@@ -1,81 +1,81 @@
 # HTTP — Request, Response, validación y middleware
 
 
-## Request API
+## API de Request
 
 ```php
-// Input — priority: route params > JSON body > POST > GET
+// Input — prioridad: params de ruta > body JSON > POST > GET
 $request->input('key');
 $request->input('key', 'default');
-$request->all();                   // all merged inputs
+$request->all();                   // todos los inputs combinados
 $request->only(['campo1', 'campo2']);
 $request->except(['_token']);
 
-// Route parameters (from URI segments like {id})
+// Parámetros de ruta (de los segmentos de URI como {id})
 $request->route('id');
 
-// HTTP metadata
+// Metadata HTTP
 $request->method();                // 'GET', 'POST', etc.
-$request->uri();                   // '/path/only' (no query string)
+$request->uri();                   // '/path/only' (sin query string)
 $request->header('X-Custom');
-$request->bearerToken();           // extracts from Authorization: Bearer <token>
-$request->ip();                    // client IP, respects trusted proxies
+$request->bearerToken();           // lo extrae de Authorization: Bearer <token>
+$request->ip();                    // IP del cliente, respeta proxies de confianza
 
-// Middleware-set context
-$request->user();                  // array payload from JWT (set by AuthMiddleware)
-$request->tenantId();              // string (set by TenantMiddleware)
+// Contexto seteado por middleware
+$request->user();                  // payload (array) del JWT (lo setea AuthMiddleware)
+$request->tenantId();              // string (lo setea TenantMiddleware)
 
-// Type checks
-$request->isJson();                // true if Content-Type: application/json
+// Chequeos de tipo
+$request->isJson();                // true si Content-Type: application/json
 
-// Magic property access
-$request->nombre;                  // same as $request->input('nombre')
+// Acceso mágico por propiedad
+$request->nombre;                  // equivalente a $request->input('nombre')
 ```
 
 ---
 
-## Response API
+## API de Response
 
-Response is immutable — every method returns a new instance.
+Response es inmutable — cada método devuelve una instancia nueva.
 
 ```php
-// Success responses
+// Respuestas de éxito
 Response::success($data);           // 200
 Response::success($data, 201);      // 201 Created
 
-// Error responses
+// Respuestas de error
 Response::error('Not allowed.', 403);
 
 // Redirect
 Response::redirect('/new-path', 302);
 
-// Builder pattern (immutable — each method returns a new instance)
+// Patrón builder (inmutable — cada método devuelve una instancia nueva)
 (new Response())
     ->withStatus(200)
     ->withHeader('X-Custom', 'value')
     ->json(['key' => 'value']);
 
-// Inspect without sending
+// Inspeccionar sin enviar
 $response->getStatus();            // int
 $response->getHeaders();           // array<string, string>
 
-// Send (called once by Kernel)
+// Enviar (lo llama el Kernel una vez)
 $response->send();
 ```
 
-Success response shape:
+Forma de una respuesta de éxito:
 
 ```json
 { "success": true, "data": { ... } }
 ```
 
-Error response shape (from typed exceptions):
+Forma de una respuesta de error (de excepciones tipadas):
 
 ```json
 { "success": false, "message": "Not found." }
 ```
 
-Validation error shape:
+Forma de un error de validación:
 
 ```json
 {
@@ -90,9 +90,9 @@ Validation error shape:
 
 ---
 
-## Request validation
+## Validación de requests
 
-Extend `FormRequest` — validation runs on construction and throws `ValidationException` (HTTP 422) automatically.
+Extendé `FormRequest` — la validación corre al construirse y lanza `ValidationException` (HTTP 422) automáticamente.
 
 ```php
 namespace App\Modules\Producto\Requests;
@@ -120,38 +120,38 @@ class CreateProductoRequest extends FormRequest
 ### `all()` vs `validated()`
 
 ```php
-// Request body: {"nombre":"Mesa","precio":150,"admin":true}
-// Rules: {nombre, precio}
+// Body de la petición: {"nombre":"Mesa","precio":150,"admin":true}
+// Reglas: {nombre, precio}
 
 $request->all()        // {"nombre":"Mesa","precio":150,"admin":true}
-$request->validated()  // {"nombre":"Mesa","precio":150}  ← only declared fields
+$request->validated()  // {"nombre":"Mesa","precio":150}  ← solo los campos declarados
 ```
 
-Always use `validated()` in business logic — it prevents mass-assignment by design.
+Usá siempre `validated()` en la lógica de negocio — previene el mass-assignment por diseño.
 
-### Validation rules
+### Reglas de validación
 
-| Rule | Example | Description |
+| Regla | Ejemplo | Descripción |
 |---|---|---|
-| `required` | `required` | Present and non-empty |
-| `email` | `email` | Valid email format |
-| `min:N` | `min:6` | Minimum string length (multibyte-aware) |
-| `max:N` | `max:255` | Maximum string length (multibyte-aware) |
-| `integer` | `integer` | Must be an integer value |
-| `numeric` | `numeric` | Must be numeric (int or float) |
+| `required` | `required` | Presente y no vacío |
+| `email` | `email` | Formato de email válido |
+| `min:N` | `min:6` | Largo mínimo del string (multibyte-aware) |
+| `max:N` | `max:255` | Largo máximo del string (multibyte-aware) |
+| `integer` | `integer` | Debe ser un valor entero |
+| `numeric` | `numeric` | Debe ser numérico (int o float) |
 | `boolean` | `boolean` | `true`, `false`, `0`, `1`, `'0'`, `'1'` |
-| `string` | `string` | Must be a PHP string type |
-| `array` | `array` | Must be a PHP array type |
-| `in:a,b,c` | `in:admin,user` | Must be one of the listed values |
-| `url` | `url` | Valid URL (`filter_var FILTER_VALIDATE_URL`) |
-| `date` | `date` | Valid date in `Y-m-d` format (default) |
-| `date:format` | `date:d/m/Y` | Valid date in custom format |
-| `regex:/pattern/` | `regex:/^\d{4}$/` | Matches the given regular expression |
-| `uuid` | `uuid` | Valid UUID v4 format |
-| `confirmed` | `confirmed` | Matches `{field}_confirmation` sibling |
-| `nullable` | `nullable` | Skip all rules if field is absent or empty string |
+| `string` | `string` | Debe ser de tipo string de PHP |
+| `array` | `array` | Debe ser de tipo array de PHP |
+| `in:a,b,c` | `in:admin,user` | Debe ser uno de los valores listados |
+| `url` | `url` | URL válida (`filter_var FILTER_VALIDATE_URL`) |
+| `date` | `date` | Fecha válida en formato `Y-m-d` (por defecto) |
+| `date:format` | `date:d/m/Y` | Fecha válida en un formato custom |
+| `regex:/pattern/` | `regex:/^\d{4}$/` | Coincide con la expresión regular dada |
+| `uuid` | `uuid` | Formato UUID v4 válido |
+| `confirmed` | `confirmed` | Coincide con el campo hermano `{field}_confirmation` |
+| `nullable` | `nullable` | Saltea todas las reglas si el campo está ausente o es string vacío |
 
-Rules are composable with `|`:
+Las reglas se componen con `|`:
 
 ```php
 'email' => 'required|email|max:255',
@@ -160,9 +160,9 @@ Rules are composable with `|`:
 
 ---
 
-## Exceptions → HTTP responses
+## Excepciones → respuestas HTTP
 
-Throw a typed exception anywhere — the global handler converts it to JSON automatically.
+Lanzá una excepción tipada en cualquier lado — el manejador global la convierte a JSON automáticamente.
 
 ```php
 throw new AuthException('Invalid credentials.');       // 401
@@ -170,39 +170,39 @@ throw new ForbiddenException('Admin only.');           // 403
 throw new NotFoundException('Producto', $id);          // 404
 throw new ValidationException(['campo' => ['msg']]);   // 422
 throw new RateLimitException('Too many attempts.');    // 429
-throw new DatabaseException('Query failed.');          // 500 (message hidden in prod)
+throw new DatabaseException('Query failed.');          // 500 (mensaje oculto en prod)
 ```
 
-| Exception | HTTP | Notes |
+| Excepción | HTTP | Notas |
 |---|---|---|
-| `AuthException` | 401 | Invalid/missing/revoked token |
-| `ForbiddenException` | 403 | Authenticated but not authorized |
-| `NotFoundException` | 404 | Resource or route not found |
-| `MethodNotAllowedException` | 405 | Right path, wrong HTTP method |
-| `ValidationException` | 422 | Carries a field → messages array |
-| `RateLimitException` | 429 | Too many login attempts |
-| `DatabaseException` | 500 | DB errors; message hidden when `APP_DEBUG=false` |
+| `AuthException` | 401 | Token inválido/ausente/revocado |
+| `ForbiddenException` | 403 | Autenticado pero no autorizado |
+| `NotFoundException` | 404 | Recurso o ruta no encontrada |
+| `MethodNotAllowedException` | 405 | Path correcto, método HTTP incorrecto |
+| `ValidationException` | 422 | Lleva un array campo → mensajes |
+| `RateLimitException` | 429 | Demasiados intentos de login |
+| `DatabaseException` | 500 | Errores de DB; el mensaje se oculta con `APP_DEBUG=false` |
 
-All exceptions extend `AppException`. Unhandled `Throwable` returns 500 with the exception detail hidden in production.
+Todas las excepciones extienden `AppException`. Un `Throwable` no manejado devuelve 500 con el detalle de la excepción oculto en producción.
 
 ---
 
 ## Middleware
 
-| Middleware | Applied | Effect |
+| Middleware | Se aplica | Efecto |
 |---|---|---|
-| `CorsMiddleware` | All requests | CORS headers; handles OPTIONS preflight |
-| `RequestSizeLimitMiddleware` | All requests | Rejects bodies over `app.max_request_size` (default 2 MB) |
-| `SecurityHeadersMiddleware` | All requests | X-Frame-Options, X-Content-Type-Options, Referrer-Policy, etc. |
-| `RequestLoggerMiddleware` | All requests | Structured JSON log entry: method, URI, status, duration |
-| `AuthMiddleware` | Protected routes | Decodes JWT, validates token is not revoked, sets `$request->user()` |
-| `AdminMiddleware` | Admin routes | Requires `user['rol'] === 1`, throws 403 otherwise |
-| `TenantMiddleware` | Tenant-scoped routes | Reads `tenant_id` from JWT payload, sets `$request->tenantId()` |
-| `PermissionMiddleware` | RBAC routes | Checks `roles_permisos` table for the given permission key (403 if not granted) |
+| `CorsMiddleware` | Todas las peticiones | Headers CORS; maneja el preflight OPTIONS |
+| `RequestSizeLimitMiddleware` | Todas las peticiones | Rechaza bodies por encima de `app.max_request_size` (2 MB por defecto) |
+| `SecurityHeadersMiddleware` | Todas las peticiones | X-Frame-Options, X-Content-Type-Options, Referrer-Policy, etc. |
+| `RequestLoggerMiddleware` | Todas las peticiones | Entrada de log JSON estructurada: método, URI, status, duración |
+| `AuthMiddleware` | Rutas protegidas | Decodifica el JWT, valida que el token no esté revocado, setea `$request->user()` |
+| `AdminMiddleware` | Rutas de admin | Requiere `user['rol'] === 1`, lanza 403 si no |
+| `TenantMiddleware` | Rutas con scope de tenant | Lee el `tenant_id` del payload del JWT, setea `$request->tenantId()` |
+| `PermissionMiddleware` | Rutas RBAC | Chequea la tabla `roles_permisos` por la clave de permiso dada (403 si no está concedido) |
 
-The global pipeline (`CorsMiddleware → RequestSizeLimitMiddleware → SecurityHeadersMiddleware → RequestLoggerMiddleware`) runs on every request before any route middleware.
+El pipeline global (`CorsMiddleware → RequestSizeLimitMiddleware → SecurityHeadersMiddleware → RequestLoggerMiddleware`) corre en cada petición antes de cualquier middleware de ruta.
 
-### Writing a middleware
+### Escribir un middleware
 
 ```php
 namespace App\Http\Middleware;
@@ -216,11 +216,10 @@ class AuditMiddleware implements MiddlewareInterface
     public function handle(Request $request, callable $next): Response
     {
         $response = $next($request);
-        // post-processing here
+        // post-procesamiento acá
         return $response;
     }
 }
 ```
 
 ---
-

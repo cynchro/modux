@@ -1,64 +1,63 @@
 # Módulos opcionales (IA, Billing)
 
 
-## Optional: AI module (LLM + RAG)
+## Opcional: módulo de IA (LLM + RAG)
 
-Modux ships **without** any AI by default. AI is an opt-in add-on built on the standalone
-[`cynchro/modux-ia`](https://packagist.org/packages/cynchro/modux-ia) SDK (LLM + RAG, no Python/Node).
+Modux viene **sin** IA por defecto. La IA es un add-on opt-in construido sobre el SDK
+independiente [`cynchro/modux-ia`](https://packagist.org/packages/cynchro/modux-ia) (LLM + RAG, sin Python/Node).
 
 ```bash
 composer require cynchro/modux-ia
 ```
 
-Then add an `app/Modules/IA/` module (auto-discovered like any other) that wires the SDK
-(`PhpAI\Bootstrap`, `PhpAI\DriverFactory`, `PhpAI\RAG\RAGEngine`) into controllers and exposes the
-endpoints you need, e.g. `POST /ia/chat`, `/ia/ask`, `/ia/ingest`, `/ia/retrieve`.
+Después agregás un módulo `app/Modules/IA/` (autodescubierto como cualquier otro) que cablea el SDK
+(`PhpAI\Bootstrap`, `PhpAI\DriverFactory`, `PhpAI\RAG\RAGEngine`) en los controllers y expone los
+endpoints que necesites, p. ej. `POST /ia/chat`, `/ia/ask`, `/ia/ingest`, `/ia/retrieve`.
 
-Configure the driver via environment variables:
+Configurá el driver con variables de entorno:
 
-| Variable | Description |
+| Variable | Descripción |
 |---|---|
 | `AI_DRIVER` | `local` / `cloud` / `cluster` |
-| `AI_CLOUD_PROVIDER` | e.g. `groq`, `openai` |
-| `AI_CLOUD_API_KEY` | Provider API key |
-| `AI_CLOUD_MODEL` | Chat/completion model |
-| `AI_CLOUD_EMBEDDING_MODEL` | Embedding model (RAG) |
-| `RAG_SQLITE_PATH` | Vector store path, e.g. `storage/ai/vectors.db` |
+| `AI_CLOUD_PROVIDER` | p. ej. `groq`, `openai` |
+| `AI_CLOUD_API_KEY` | API key del proveedor |
+| `AI_CLOUD_MODEL` | Modelo de chat/completion |
+| `AI_CLOUD_EMBEDDING_MODEL` | Modelo de embeddings (RAG) |
+| `RAG_SQLITE_PATH` | Ruta del vector store, p. ej. `storage/ai/vectors.db` |
 
-If you don't need AI, skip this section entirely — nothing in the core depends on it.
+Si no necesitás IA, salteá esta sección por completo — nada del núcleo depende de ella.
 
-## Optional: Billing module
+## Opcional: módulo de Billing
 
-Modux ships **without** billing by default. It's an opt-in add-on: install the SDK + a
-gateway adapter, and the bundled `app/Modules/Billing` activates itself (guarded by
-`class_exists`, so the core stays clean when billing isn't installed).
+Modux viene **sin** billing por defecto. Es un add-on opt-in: instalás el SDK + un adaptador
+de pasarela, y el módulo incluido `app/Modules/Billing` se activa solo (protegido por
+`class_exists`, así el núcleo queda limpio cuando billing no está instalado).
 
 ```bash
 composer require cynchro/modux-billing cynchro/modux-billing-stripe
-# or, for Argentina:  cynchro/modux-billing-mp
+# o, para Argentina:  cynchro/modux-billing-mp
 ```
 
-The module exposes:
+El módulo expone:
 
 ```
-POST /billing/checkout              { "plan": "pro" }   → gateway checkout URL (auth + tenant)
-POST /billing/webhook/{gateway}     (public, verified by signature)
+POST /billing/checkout              { "plan": "pro" }   → URL de checkout de la pasarela (auth + tenant)
+POST /billing/webhook/{gateway}     (público, verificado por firma)
 ```
 
-The webhook is verified with the adapter's signature scheme, normalized, and applied via
-`BillingManager::handleEvent()`, which writes the tenant's entitlements (`source =
-billing:<gateway>`) — picked up by the **Entitlements** gating above. Configure gateways in
+El webhook se verifica con el esquema de firma del adaptador, se normaliza y se aplica vía
+`BillingManager::handleEvent()`, que escribe los entitlements del tenant (`source =
+billing:<gateway>`) — que toma el gating de **Entitlements** de más arriba. Configurá las pasarelas en
 `config/billing.php` (env: `BILLING_GATEWAY`, `STRIPE_*`, `MP_*`).
 
-Define your plans + their entitlements with the idempotent seeder (edit the `$plans` array):
+Definí tus planes + sus entitlements con el seeder idempotente (editá el array `$plans`):
 
 ```bash
-php seeders/BillingPlansSeeder.php   # creates plans/plan_entitlements; re-running upserts
+php seeders/BillingPlansSeeder.php   # crea plans/plan_entitlements; al re-correr hace upsert
 ```
 
-> Architecture: the base only **reads** `tenant_entitlements`; billing **writes** it — so
-> product modules never depend on billing. See
+> Arquitectura: el base solo **lee** `tenant_entitlements`; billing lo **escribe** — así los
+> módulos de producto nunca dependen de billing. Ver
 > `docs/adr/0001-saas-identity-entitlements-billing.md`.
 
 ---
-

@@ -28,14 +28,16 @@ NO_PUSH=0
 # Mapeo  docs/<archivo>  →  Página-Wiki (el nombre con guiones es el título con
 # espacios en GitHub). Mantené esta lista alineada con docs/ y con el índice del
 # README.
+# El wiki es inglés (igual que el README); el sitio bilingüe vive en GitHub Pages.
+# Por eso se leen las variantes *.en.md (el español es el *.md por defecto del sitio).
 PAGES=(
-  "cli.md:CLI"
-  "modules.md:Modules-and-Routing"
-  "http.md:HTTP"
-  "auth-and-tenancy.md:Auth-and-Multi-tenancy"
-  "infrastructure.md:Infrastructure"
-  "platform.md:Platform"
-  "optional-modules.md:Optional-Modules"
+  "cli.en.md:CLI"
+  "modules.en.md:Modules-and-Routing"
+  "http.en.md:HTTP"
+  "auth-and-tenancy.en.md:Auth-and-Multi-tenancy"
+  "infrastructure.en.md:Infrastructure"
+  "platform.en.md:Platform"
+  "optional-modules.en.md:Optional-Modules"
 )
 
 BUILD="$(mktemp -d)"

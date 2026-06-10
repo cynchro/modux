@@ -173,22 +173,18 @@ cada tema en profundidad está en su propio archivo:
 - [Plataforma](docs/platform.md) — eventos, RBAC, entitlements, metering/cuotas, transacciones, cola de jobs, health check, variables de entorno.
 - [Módulos opcionales](docs/optional-modules.md) — IA (LLM + RAG) y Billing (Stripe / Mercado Pago).
 
-## Why not Laravel?
+## Performance
 
-| | Modux | Laravel |
-|---|---|---|
-| Runtime dependencies | ~5 | 30+ |
-| Request lifecycle | 5 files | 50+ files |
-| DI | Explicit constructor injection | Facades + service locator |
-| Magic | None | `Auth::user()`, `DB::table()`, `Cache::get()`, ... |
-| ORM | Raw PDO (you control every query) | Eloquent |
-| Queue / Events | DB-backed async queue + synchronous `EventDispatcher` | Full async queue + broadcasting |
-| Validation rules | 16 essential | 50+ |
-| Learning curve | Read the source, understand everything | Learn the framework conventions |
-| Suited for | Controlled APIs, internal tools, multi-tenant SaaS | Full-featured web apps |
+Measured on the production image (PHP 8.2 + Apache/mod_php, MySQL 8.0) with ApacheBench at
+concurrency 50:
 
-If you need Eloquent, queues, broadcasting, or an ecosystem of packages — use Laravel.  
-If you want to understand exactly what happens on every line of every request — use this.
+| Endpoint | What it measures | Req/s | p50 | p95 | p99 |
+|---|---|---|---|---|---|
+| `GET /` | Framework overhead (routing + DI + middleware pipeline) | ~3,520 | 13 ms | 21 ms | 27 ms |
+| `GET /health` | Framework + one `SELECT 1` round-trip | ~1,910 | 25 ms | 38 ms | 45 ms |
+
+About **0.28 ms of framework overhead per request**, zero failed requests under load. Numbers
+are indicative (single containerized host) and vary with hardware and workload.
 
 ---
 

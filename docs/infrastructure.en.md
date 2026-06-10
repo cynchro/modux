@@ -5,19 +5,19 @@
 
 ```php
 Config::get('auth.jwt_secret');         // config/auth.php → jwt_secret
-Config::get('app.debug', false);        // con default
+Config::get('app.debug', false);        // with default
 Config::get('cors.allowed_origins');    // array
 
-Config::all('database');                // todo config/database.php como array
+Config::all('database');                // entire config/database.php as array
 ```
 
-Los archivos de config viven en `config/` y son PHP plano que devuelve arrays. Los valores se mapean a variables de entorno vía `$_ENV`.
+Config files live in `config/` and are plain PHP files returning arrays. Values map to env vars via `$_ENV`.
 
 ---
 
 ## Logger
 
-Compatible con PSR-3. Se inyecta por constructor:
+PSR-3 compliant. Inject via constructor:
 
 ```php
 public function __construct(
@@ -33,30 +33,30 @@ public function delete(int $id): void
 }
 ```
 
-Escribe a `storage/logs/app.log` (JSON estructurado, una entrada por línea):
+Output to `storage/logs/app.log` (structured JSON, one entry per line):
 
 ```json
 {"timestamp":"2026-04-25T15:30:00+00:00","level":"info","message":"Deleting product","context":{"id":42}}
 ```
 
-Niveles de log (en orden): `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`
+Log levels (in order): `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`
 
-El nivel mínimo se controla con `LOG_LEVEL`. Los mensajes por debajo se descartan en silencio.
+The minimum level is controlled by `LOG_LEVEL`. Messages below it are silently dropped.
 
-El destino se controla con `LOG_CHANNEL`:
+The destination is controlled by `LOG_CHANNEL`:
 
-- `file` (por defecto) — agrega a `storage/logs/app.log`.
-- `stderr` — escribe al stream de error del proceso. Usa `php://stderr` (no la
-  constante `STDERR`), así que funciona bajo **cualquier SAPI** — CLI, Apache/mod_php o php-fpm.
+- `file` (default) — appends to `storage/logs/app.log`.
+- `stderr` — writes to the process error stream. It uses `php://stderr` (not the
+  `STDERR` constant), so it works under **any SAPI** — CLI, Apache/mod_php or php-fpm.
 
-Si no se puede escribir el archivo de log, el logger cae a stderr automáticamente — sin
-fallos silenciosos.
+If the log file cannot be written, the logger falls back to stderr automatically — no
+silent failures.
 
 ---
 
-## Paginación
+## Pagination
 
-`PaginatorHelper` envuelve cualquier query SQL y lee `page` / `perPage` de los parámetros de query automáticamente.
+`PaginatorHelper` wraps any SQL query and reads `page` / `perPage` from query parameters automatically.
 
 ```php
 public function list(?string $tenantId = null): array
@@ -73,15 +73,15 @@ public function list(?string $tenantId = null): array
 }
 ```
 
-Parámetros de query aceptados:
+Query parameters accepted:
 
-| Param | Default | Descripción |
+| Param | Default | Description |
 |---|---|---|
-| `page` | `1` | Página actual (índice 1) |
-| `perPage` | `10` | Ítems por página |
-| `paginate` | `true` | Poné `false` para devolver todos los resultados sin paginar |
+| `page` | `1` | Current page (1-indexed) |
+| `perPage` | `10` | Items per page |
+| `paginate` | `true` | Set to `false` to return all results unpaged |
 
-Forma de la respuesta (siempre HTTP 200, incluso cuando `results` está vacío):
+Response shape (always HTTP 200, even when `results` is empty):
 
 ```json
 {
@@ -93,11 +93,11 @@ Forma de la respuesta (siempre HTTP 200, incluso cuando `results` está vacío):
 }
 ```
 
-LIMIT y OFFSET se vinculan con prepared statements de PDO. `perPage` y `page` se castean a enteros.
+LIMIT and OFFSET are bound via PDO prepared statements. `perPage` and `page` are cast to integers.
 
 ---
 
-## Migraciones
+## Migrations
 
 ```php
 // migrations/0002_create_productos_table.php
@@ -136,24 +136,24 @@ composer analyse   # phpstan level 6 (PHPStan 2.x)
 composer audit     # vulnerabilidades en dependencias
 ```
 
-### Quality gate — no subas una base rota
+### Quality gate — don't push a broken base
 
-Este es un framework versionado del que otros dependen, así que los mismos chequeos corren en tres lugares:
+This is a versioned framework that others depend on, so the same checks run in three places:
 
-- **Pre-push hook local** (`.githooks/pre-push`) — bloquea `git push` salvo que `composer validate`,
-  `composer audit`, lint, análisis estático y tests pasen todos. Activalo una vez por clon:
+- **Local pre-push hook** (`.githooks/pre-push`) — blocks `git push` unless `composer validate`,
+  `composer audit`, lint, static analysis and tests all pass. Enable it once per clone:
 
   ```bash
   git config core.hooksPath .githooks
   ```
 
-  Saltealo solo en una emergencia con `git push --no-verify`.
+  Bypass only in an emergency with `git push --no-verify`.
 
-- **CI** (`.github/workflows/ci.yml`) — corre el mismo gate (incl. `composer audit`) contra un
-  service **MySQL 8** real para que los tests de integración ejerciten SQL/migraciones, más un
-  build de la imagen Docker, en cada push y PR a `main`.
+- **CI** (`.github/workflows/ci.yml`) — runs the same gate (incl. `composer audit`) against a
+  real **MySQL 8 service** so the integration tests exercise SQL/migrations, plus a Docker
+  image build, on every push and PR to `main`.
 
-### Unit tests — repositorios mockeados, sin DB
+### Unit tests — mock repositories, no DB
 
 ```php
 class ProductoServiceTest extends UnitTestCase
@@ -180,9 +180,9 @@ class ProductoServiceTest extends UnitTestCase
 }
 ```
 
-`UnitTestCase` provee:
-- `setUp()` — limpia las superglobales antes de cada test
-- `makeRequest(?array $user, ?string $tenantId): Request` — construye un Request con contexto user/tenant preseteado
+`UnitTestCase` provides:
+- `setUp()` — clears superglobals before each test
+- `makeRequest(?array $user, ?string $tenantId): Request` — builds a Request with pre-set user/tenant context
 
 ### Feature / integration tests — HTTP real, DB real, rollback por test
 
@@ -224,3 +224,4 @@ el esquema se crea una vez por proceso (drop-all + migraciones). Si no hay base 
 **CI** los corre contra su service `mysql:8.0`.
 
 ---
+
