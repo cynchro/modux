@@ -4,7 +4,8 @@ site_url: https://cynchro.github.io/modux/
 repo_url: https://github.com/cynchro/modux
 repo_name: cynchro/modux
 edit_uri: edit/main/docs/
-copyright: Modux · MIT
+copyright: >
+  Modux · hecho por <a href="https://cynchrolabs.com.ar/" target="_blank" rel="noopener">CynchroLabs</a> · MIT
 
 docs_dir: docs
 
@@ -15,20 +16,25 @@ exclude_docs: |
 theme:
   name: material
   language: es
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  font:
+    text: Inter
+    code: JetBrains Mono
   icon:
     repo: fontawesome/brands/github
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-night
         name: Modo oscuro
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-sunny
         name: Modo claro
@@ -54,6 +60,18 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.superfences
   - pymdownx.details
+
+extra_css:
+  - assets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/solid/globe
+      link: https://cynchrolabs.com.ar/
+      name: CynchroLabs
+    - icon: fontawesome/brands/github
+      link: https://github.com/cynchro/modux
+      name: Modux en GitHub
 
 nav:
   - Inicio: index.md

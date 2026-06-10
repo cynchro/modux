@@ -1,0 +1,56 @@
+/* ============================================================================
+   Modux · branding del sitio de documentación
+   Para cambiar el color de marca (CynchroLabs), editá SOLO estas 3 variables.
+   ============================================================================ */
+:root {
+  --brand:        #6d28d9; /* violeta principal  */
+  --brand-light:  #8b5cf6; /* hover / acentos    */
+  --brand-dark:   #5b21b6; /* header en dark mode */
+}
+
+/* Aplica la marca al primary y accent de Material (palette: custom). */
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color:        var(--brand);
+  --md-primary-fg-color--light: var(--brand-light);
+  --md-primary-fg-color--dark:  var(--brand-dark);
+}
+[data-md-color-accent="custom"] {
+  --md-accent-fg-color: var(--brand-light);
+}
+
+/* Header con un sutil degradé de marca (toque moderno). */
+.md-header,
+.md-tabs {
+  background: linear-gradient(90deg, var(--brand-dark) 0%, var(--brand) 100%);
+}
+
+/* Links del contenido en el color de marca, con subrayado suave al hover. */
+.md-typeset a {
+  color: var(--brand-light);
+  text-decoration-color: color-mix(in srgb, var(--brand-light) 35%, transparent);
+}
+.md-typeset a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* Esquinas redondeadas y aire en bloques de código y admoniciones. */
+.md-typeset pre > code,
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 10px;
+}
+.md-typeset code {
+  border-radius: 5px;
+}
+
+/* Tipografía un poco más marcada en títulos. */
+.md-typeset h1,
+.md-typeset h2 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Botón "edit on GitHub" y navegación, un poco más sutiles. */
+.md-nav__link--active {
+  font-weight: 600;
+}
