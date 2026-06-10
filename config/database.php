@@ -10,6 +10,11 @@ return [
     'charset'  => 'utf8mb4',
     'options'  => [
         \PDO::ATTR_ERRMODE    => \PDO::ERRMODE_EXCEPTION,
-        \PDO::ATTR_PERSISTENT => false,
+        // Conexiones persistentes: reutilizan la conexión entre requests del mismo
+        // worker (FPM/mod_php) y evitan el handshake TCP/auth por request — una mejora
+        // de latencia real. Opt-in vía DB_PERSISTENT=true. Por defecto false: con muchos
+        // workers cada uno retiene una conexión, así que ajustá `max_connections` del
+        // servidor antes de activarla.
+        \PDO::ATTR_PERSISTENT => filter_var($_ENV['DB_PERSISTENT'] ?? false, FILTER_VALIDATE_BOOLEAN),
     ],
 ];

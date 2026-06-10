@@ -66,6 +66,12 @@ final class Response
         return $this->headers;
     }
 
+    /** @return array<string, mixed>|null */
+    public function getBody(): ?array
+    {
+        return $this->body;
+    }
+
     public function send(): void
     {
         http_response_code($this->status);

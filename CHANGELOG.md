@@ -30,8 +30,20 @@ registro formal a partir de los cambios siguientes.
   traducidos por idioma. Resuelve el "spanglish" (menú ES + contenido EN). El wiki sigue en
   inglés (lee las variantes `*.en.md`).
 
+### Rendimiento
+
+- **Conexiones PDO persistentes opt-in** (`DB_PERSISTENT`, false por defecto) — reutilizan la
+  conexión entre requests del mismo worker (FPM/mod_php) y evitan el handshake por request.
+  Ajustá `max_connections` antes de activarla.
+
 ### Cambiado
 
+- **Health check más profundo** (`GET /health`): chequea DB **y** cache con severidades — la
+  DB es crítica (`status: down` + 503), el cache se reporta como degradación sin cambiar el
+  código de estado. *La forma de la respuesta cambió*: `db` pasó de top-level a `checks.db`
+  (+ `checks.cache`), y el estado degradado es `down` (antes `degraded`). Los probes que miran
+  el código HTTP (200/503) no se ven afectados.
+- Nuevo accesor `Response::getBody(): ?array` (simétrico con `getStatus()`/`getHeaders()`).
 - **Quitada la comparación "Why not Laravel?"** del README; reemplazada por una sección
   **Performance** con datos reales de benchmark (sin comparaciones con otros frameworks):
   `GET /` ~3.520 req/s (≈0,28 ms de overhead/req), `GET /health` ~1.910 req/s, p50/p95/p99 y
