@@ -12,7 +12,16 @@ php modux migrate                              Run all pending migrations
 php modux migrate:rollback                     Roll back the last migration batch
 php modux migrate:fresh                        Rollback all + re-run all migrations
 php modux routes                               List every registered route
+php modux queue:work [--queue= --sleep= --once]  Process jobs from a queue
+php modux queue:failed                         List failed jobs
+php modux queue:retry <id>                     Retry a failed job
+php modux queue:flush                          Delete all failed jobs
+php modux entitlements:roll-periods            Advance expired quota cycles (safety net)
 ```
+
+> Los comandos `queue:*` (worker de la cola de jobs) y `entitlements:roll-periods` (red de
+> seguridad de ciclos de cuota) se documentan en detalle en la página **Platform**
+> — definición/despacho de jobs, el worker, jobs fallidos y el reseteo de cuotas vencidas.
 
 ### `make:module`
 

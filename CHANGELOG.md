@@ -25,6 +25,9 @@ registro formal a partir de los cambios siguientes.
   requisito de MySQL y skip sin DB) en vez de una API que no existía; documentados
   `LOG_CHANNEL` (con la portabilidad `php://stderr`), `composer audit` en el quality
   gate, el MySQL service del CI y el caveat de store compartido del anti-replay.
+- `docs/cli.md`: completada la tabla de comandos del CLI — estaban faltando `queue:work`,
+  `queue:failed`, `queue:retry`, `queue:flush` y `entitlements:roll-periods` (los 12 comandos
+  reales del binario `modux` ahora figuran en la referencia).
 
 ## [2.0.1] - 2026-06-09
 
