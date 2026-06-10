@@ -25,12 +25,30 @@ plugins:
       languages:
         - locale: es
           default: true
-          name: Español
+          name: 🇪🇸 Español
           build: true
         - locale: en
-          name: English
+          name: 🇬🇧 English
           build: true
           site_description: A lightweight, dependency-injection-first PHP modular-monolith framework.
+          copyright: >
+            Modux · made by <a href="https://cynchrolabs.com.ar/" target="_blank" rel="noopener">CynchroLabs</a> · MIT
+          theme:
+            palette:
+              - media: "(prefers-color-scheme: light)"
+                scheme: default
+                primary: custom
+                accent: custom
+                toggle:
+                  icon: material/weather-night
+                  name: Switch to dark mode
+              - media: "(prefers-color-scheme: dark)"
+                scheme: slate
+                primary: custom
+                accent: custom
+                toggle:
+                  icon: material/weather-sunny
+                  name: Switch to light mode
           nav_translations:
             Inicio: Home
             Módulos y ruteo: Modules & Routing
