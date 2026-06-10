@@ -21,13 +21,16 @@ Request → Kernel → Pipeline global (CORS, RequestSize, SecurityHeaders, Logg
 ## Quick start
 
 ```bash
-# 1. Configurá el entorno
+# 1. Crear el proyecto desde Packagist
+composer create-project cynchro/modux my-app && cd my-app
+
+# 2. Configurá el entorno
 cp .env.example .env          # set JWT_SECRET, DB_HOST, DB_NAME, DB_USER, DB_PASS
 
-# 2. Migraciones
+# 3. Migraciones
 php modux migrate
 
-# 3. Servidor
+# 4. Servidor
 php -S localhost:8080 -t public
 ```
 
