@@ -61,3 +61,39 @@
 .md-typeset h2 { font-weight: 700; letter-spacing: -0.01em; }
 
 .md-nav__link--active { font-weight: 600; }
+
+/* ============================================================================
+   Toggle de idioma "ES | EN" (reemplaza el icono de traducción de Material).
+   ============================================================================ */
+.md-lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+.md-lang-toggle__item {
+  color: #fff;
+  opacity: 0.6;
+  text-decoration: none;
+  padding: 0.1rem 0.15rem;
+  border-radius: 4px;
+  transition: opacity 0.15s, background 0.15s;
+}
+.md-lang-toggle__item:hover {
+  opacity: 1;
+  color: #fff;
+}
+.md-lang-toggle__item--active {
+  opacity: 1;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: default;
+}
+.md-lang-toggle__sep {
+  color: #fff;
+  opacity: 0.4;
+}

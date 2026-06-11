@@ -59,6 +59,7 @@ plugins:
 
 theme:
   name: material
+  custom_dir: overrides
   language: es
   logo: assets/logo.png
   favicon: assets/isologo.png
