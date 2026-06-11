@@ -64,22 +64,32 @@
 
 /* ============================================================================
    Toggle de idioma "ES | EN" (reemplaza el icono de traducción de Material).
+   Se ubica en el extremo derecho del header, con recuadro propio, para que se
+   distinga del logo, la búsqueda y el botón de GitHub y se entienda que sirve
+   para cambiar de idioma.
    ============================================================================ */
+.md-header__option {        /* contenedor que envuelve el selector de idioma */
+  order: 100;               /* lo manda al final → extremo derecho del header */
+  margin-left: 0.5rem;
+}
 .md-lang-toggle {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  margin: 0 0.4rem;
-  font-size: 0.7rem;
-  font-weight: 600;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
   letter-spacing: 0.04em;
   user-select: none;
+  /* Recuadro tipo "pill" para que se lea como un control, no como texto suelto. */
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
 }
 .md-lang-toggle__item {
   color: #fff;
-  opacity: 0.6;
+  opacity: 0.55;
   text-decoration: none;
-  padding: 0.1rem 0.15rem;
+  padding: 0.05rem 0.2rem;
   border-radius: 4px;
   transition: opacity 0.15s, background 0.15s;
 }
@@ -89,8 +99,7 @@
 }
 .md-lang-toggle__item--active {
   opacity: 1;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  background: rgba(255, 255, 255, 0.22);
   cursor: default;
 }
 .md-lang-toggle__sep {
