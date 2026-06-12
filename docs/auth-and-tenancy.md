@@ -134,6 +134,92 @@ cambia. Ver `docs/adr/0001-saas-identity-entitlements-billing.md` §1.3.
 
 ---
 
+## Roles y permisos (RBAC)
+
+Además del multi-tenancy, el framework trae un RBAC por roles con permisos
+granulares, niveles de acceso, gate de admin y jerarquía de roles.
+
+### Modelo de datos
+
+| Tabla            | Rol                                                         |
+|------------------|------------------------------------------------------------|
+| `roles`          | roles del sistema; `parent_id` opcional para herencia      |
+| `permisos`       | permisos con `key` (identificador) y `descripcion`         |
+| `roles_permisos` | pivote rol↔permiso; `estado` = nivel concedido             |
+| `usuarios.rol`   | FK al rol del usuario                                      |
+
+El `estado` del pivote codifica el **nivel de acceso**: `0` sin permiso,
+`1` lectura, `2` lectura-escritura.
+
+### Proteger rutas por permiso
+
+`PermissionMiddleware` exige que el rol del usuario tenga un permiso con al
+menos el nivel requerido. El nivel se indica en el spec de la ruta:
+
+```php
+// Exige el permiso 'facturas' en nivel lectura (estado >= 1)
+$router->get('/facturas', [FacturaController::class, 'index'],
+    [AuthMiddleware::class, PermissionMiddleware::class . ':facturas']);
+
+// Exige nivel escritura (estado = 2)
+$router->post('/facturas', [FacturaController::class, 'store'],
+    [AuthMiddleware::class, PermissionMiddleware::class . ':facturas:write']);
+```
+
+Un rol con `facturas` en nivel lectura pasa el GET pero recibe **403** en el
+POST. Sin la relación rol↔permiso, ambos dan 403.
+
+> `PermissionMiddleware` no viene cableado en ninguna ruta por defecto: la
+> taxonomía de permisos la define cada aplicación (crea las `key`, las siembra
+> y protege sus rutas). El framework provee el mecanismo, no las claves.
+
+### PermissionChecker
+
+`App\Support\Auth\PermissionChecker` es la única fuente de verdad de la
+resolución rol→permiso. Inyectalo donde necesites comprobar permisos fuera de
+una ruta:
+
+```php
+$checker->level($rolId, 'facturas');             // 0 | 1 | 2 (nivel efectivo)
+$checker->allows($rolId, 'facturas', PermissionChecker::LEVEL_WRITE); // bool
+```
+
+### Gate de admin
+
+`AdminMiddleware` no compara contra un id de rol fijo: considera admin a
+cualquier rol que tenga el super-permiso `Roles::SUPER_PERMISSION`
+(`'Acceso Total'`) en la BD. La impersonación usa el mismo criterio. Para volver
+admin a un rol basta con asignarle ese permiso.
+
+### Jerarquía de roles
+
+Un rol puede tener un rol padre (`roles.parent_id`) y **hereda los permisos de
+toda su cadena de ancestros**. El nivel efectivo de un permiso es el máximo
+entre el propio rol y sus padres (si el padre tiene `facturas` en escritura, el
+hijo también, salvo que el hijo defina uno mayor).
+
+Asigná el padre al crear/actualizar un rol vía el módulo `Admin`:
+
+```
+POST /admin/roles          { "nombre": "Analista", "parent_id": 3 }
+PUT  /admin/roles/{id}     { "nombre": "Analista", "estado": 1, "parent_id": 3 }
+```
+
+Asignar como padre el propio rol o uno de sus descendientes cerraría un ciclo;
+el servicio lo detecta y responde **422** (`ValidationException`) sin persistir.
+
+### Gestión de roles y permisos
+
+El módulo `Admin` (rutas bajo `AuthMiddleware + AdminMiddleware`) expone el CRUD:
+
+```
+GET/POST/PUT  /admin/roles               gestionar roles (incluye parent_id)
+GET/POST/PUT  /admin/permisos            gestionar permisos (key, descripcion, estado)
+POST/DELETE   /admin/roles/{id}/assign   asignar / quitar permisos a un rol
+```
+
+---
+
 ## Container de DI
 
 Compatible con PSR-11, con autowiring por reflexión.
@@ -155,7 +241,9 @@ $service = $app->get(MyService::class);
 $service = $app->make(MyService::class);
 
 // Autowiring + inyectar escalares extra en parámetros builtin del constructor
-$middleware = $app->makeWith(PermissionMiddleware::class, 'facturas.delete');
+// (PermissionMiddleware: el PermissionChecker se autowirea; 'facturas' y 'write'
+//  son los escalares de permiso y nivel)
+$middleware = $app->makeWith(PermissionMiddleware::class, 'facturas', 'write');
 ```
 
 El autowiring resuelve los parámetros del constructor por nombre de tipo. Si no hay binding para un tipo, resuelve la clase recursivamente. Los parámetros escalares sin default lanzan `ContainerException`. `makeWith` inyecta escalares adicionales de forma posicional en los parámetros de tipo builtin — lo usa internamente el Router para los middlewares parametrizados.
