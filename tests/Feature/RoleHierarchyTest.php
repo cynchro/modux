@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Support\Auth\PermissionChecker;
+use App\Modules\Admin\Repositories\RolRepository;
 
 /**
  * Verifica la herencia de permisos a través de roles.parent_id contra MySQL real.
@@ -79,5 +80,40 @@ class RoleHierarchyTest extends FeatureTestCase
 
         // La herencia sube por toda la cadena, no solo un nivel.
         $this->assertSame(PermissionChecker::LEVEL_READ, $this->checker()->level($child, 'reports'));
+    }
+
+    // ── Anti-ciclos (RolRepository::wouldCreateCycle) ──────────────────────────
+
+    private function rolRepository(): RolRepository
+    {
+        return $this->app->get(RolRepository::class);
+    }
+
+    public function test_cycle_detected_when_parent_is_self(): void
+    {
+        $rol = $this->createRol('Solo');
+        $this->assertTrue($this->rolRepository()->wouldCreateCycle($rol, $rol));
+    }
+
+    public function test_cycle_detected_when_parent_is_a_descendant(): void
+    {
+        $top    = $this->createRol('Top');
+        $middle = $this->createRol('Middle', $top);
+        $bottom = $this->createRol('Bottom', $middle);
+
+        // Hacer que Top herede de Bottom (su nieto) cerraría el ciclo.
+        $this->assertTrue($this->rolRepository()->wouldCreateCycle($top, $bottom));
+    }
+
+    public function test_no_cycle_for_unrelated_or_upward_parent(): void
+    {
+        $top    = $this->createRol('Top');
+        $middle = $this->createRol('Middle', $top);
+        $other  = $this->createRol('Other');
+
+        // Bottom nuevo apuntando a Middle (hacia arriba): sin ciclo.
+        $bottom = $this->createRol('Bottom', $middle);
+        $this->assertFalse($this->rolRepository()->wouldCreateCycle($bottom, $other));
+        $this->assertFalse($this->rolRepository()->wouldCreateCycle($bottom, $top));
     }
 }

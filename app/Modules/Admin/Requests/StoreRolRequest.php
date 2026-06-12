@@ -10,7 +10,8 @@ class StoreRolRequest extends FormRequest
     protected function rules(): array
     {
         return [
-            'nombre' => 'required|string|min:2|max:100',
+            'nombre'    => 'required|string|min:2|max:100',
+            'parent_id' => 'nullable|integer',
         ];
     }
 }
