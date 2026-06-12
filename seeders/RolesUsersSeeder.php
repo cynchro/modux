@@ -62,12 +62,12 @@ if (!$role) {
 }
 
 // ── Permission ────────────────────────────────────────────────────────────────
-$stmt = $pdo->prepare("SELECT id FROM permisos WHERE permiso = 'Acceso Total'");
+$stmt = $pdo->prepare("SELECT id FROM permisos WHERE `key` = 'Acceso Total'");
 $stmt->execute();
 $permiso = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$permiso) {
-    $pdo->prepare("INSERT INTO permisos (permiso, estado) VALUES ('Acceso Total', 2)")->execute();
+    $pdo->prepare("INSERT INTO permisos (`key`, estado) VALUES ('Acceso Total', 2)")->execute();
     $permisoId = (int) $pdo->lastInsertId();
     echo "  [created] permiso: Acceso Total (id={$permisoId})\n";
 } else {

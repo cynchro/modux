@@ -176,10 +176,11 @@ class Router
             return $this->container->get($spec);
         }
 
-        [$class, $param] = explode(':', $spec, 2);
+        $parts = explode(':', $spec);
+        $class = array_shift($parts);
 
         /** @var MiddlewareInterface */
-        return $this->container->makeWith($class, $param);
+        return $this->container->makeWith($class, ...$parts);
     }
 
     /** @param array{0: class-string, 1: string} $action */
