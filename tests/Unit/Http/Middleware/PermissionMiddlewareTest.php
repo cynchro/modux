@@ -3,6 +3,7 @@
 namespace Tests\Unit\Http\Middleware;
 
 use App\Http\Middleware\PermissionMiddleware;
+use App\Support\Auth\PermissionChecker;
 use App\Support\Request;
 use App\Support\Response;
 use App\Exceptions\AuthException;
@@ -11,22 +12,16 @@ use Tests\Unit\UnitTestCase;
 
 class PermissionMiddlewareTest extends UnitTestCase
 {
-    private function mockPdoWithPermission(bool $hasPermission): \PDO
+    private function checkerAllowing(bool $allows): PermissionChecker
     {
-        $stmt = $this->createMock(\PDOStatement::class);
-        $stmt->method('execute');
-        $stmt->method('fetch')->willReturn($hasPermission ? ['1' => '1'] : false);
-
-        $pdo = $this->createMock(\PDO::class);
-        $pdo->method('prepare')->willReturn($stmt);
-
-        return $pdo;
+        $checker = $this->createMock(PermissionChecker::class);
+        $checker->method('allows')->willReturn($allows);
+        return $checker;
     }
 
-    public function test_passes_when_permission_exists(): void
+    public function test_passes_when_checker_allows(): void
     {
-        $pdo     = $this->mockPdoWithPermission(true);
-        $mw      = new PermissionMiddleware($pdo, 'usuarios.delete');
+        $mw      = new PermissionMiddleware($this->checkerAllowing(true), 'usuarios.delete');
         $request = $this->makeRequest(['sub' => 1, 'rol' => 1]);
 
         $called = false;
@@ -39,10 +34,25 @@ class PermissionMiddlewareTest extends UnitTestCase
         $this->assertSame(200, $result->getStatus());
     }
 
-    public function test_throws_forbidden_when_permission_missing(): void
+    public function test_write_level_maps_to_write_minimum(): void
     {
-        $pdo     = $this->mockPdoWithPermission(false);
-        $mw      = new PermissionMiddleware($pdo, 'facturas.write');
+        $checker = $this->createMock(PermissionChecker::class);
+        $checker->expects($this->once())
+            ->method('allows')
+            ->with(1, 'facturas', PermissionChecker::LEVEL_WRITE)
+            ->willReturn(true);
+
+        $mw      = new PermissionMiddleware($checker, 'facturas', 'write');
+        $request = $this->makeRequest(['sub' => 1, 'rol' => 1]);
+
+        $result = $mw->handle($request, fn(Request $r): Response => Response::success());
+
+        $this->assertSame(200, $result->getStatus());
+    }
+
+    public function test_throws_forbidden_when_checker_denies(): void
+    {
+        $mw      = new PermissionMiddleware($this->checkerAllowing(false), 'facturas', 'write');
         $request = $this->makeRequest(['sub' => 1, 'rol' => 2]);
 
         $this->expectException(ForbiddenException::class);
@@ -52,8 +62,7 @@ class PermissionMiddlewareTest extends UnitTestCase
 
     public function test_throws_auth_exception_when_no_user(): void
     {
-        $pdo     = $this->createMock(\PDO::class);
-        $mw      = new PermissionMiddleware($pdo, 'any.permission');
+        $mw      = new PermissionMiddleware($this->createMock(PermissionChecker::class), 'any.permission');
         $request = $this->makeRequest(null);
 
         $this->expectException(AuthException::class);

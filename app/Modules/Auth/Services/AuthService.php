@@ -7,13 +7,15 @@ use App\Exceptions\RateLimitException;
 use App\Support\JWTConfig;
 use App\Support\RateLimiter;
 use App\Support\Roles;
+use App\Support\Auth\PermissionChecker;
 use App\Modules\Auth\Repositories\AuthRepository;
 
 class AuthService
 {
     public function __construct(
         private AuthRepository $repository,
-        private RateLimiter $rateLimiter
+        private RateLimiter $rateLimiter,
+        private PermissionChecker $permissions
     ) {
     }
 
@@ -112,7 +114,7 @@ class AuthService
     {
         $admin = $this->repository->findUserById($adminId);
 
-        if (!$admin || (int) ($admin['rol'] ?? 0) !== Roles::ADMIN) {
+        if (!$admin || !$this->permissions->allows((int) ($admin['rol'] ?? 0), Roles::SUPER_PERMISSION)) {
             throw new AuthException('No tienes permisos para suplantar usuarios.', 403);
         }
 
