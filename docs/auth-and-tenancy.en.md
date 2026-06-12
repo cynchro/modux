@@ -134,6 +134,93 @@ cambia. Ver `docs/adr/0001-saas-identity-entitlements-billing.md` §1.3.
 
 ---
 
+## Roles & permissions (RBAC)
+
+Beyond multi-tenancy, the framework ships a role-based RBAC with granular
+permissions, access levels, an admin gate and role hierarchy.
+
+### Data model
+
+| Table            | Role                                                       |
+|------------------|------------------------------------------------------------|
+| `roles`          | system roles; optional `parent_id` for inheritance         |
+| `permisos`       | permissions with a `key` (identifier) and `descripcion`    |
+| `roles_permisos` | role↔permission pivot; `estado` = granted level            |
+| `usuarios.rol`   | FK to the user's role                                       |
+
+The pivot's `estado` encodes the **access level**: `0` no permission,
+`1` read, `2` read-write.
+
+### Guarding routes by permission
+
+`PermissionMiddleware` requires the user's role to hold a permission at least at
+the requested level. The level is given in the route spec:
+
+```php
+// Requires the 'facturas' permission at read level (estado >= 1)
+$router->get('/facturas', [FacturaController::class, 'index'],
+    [AuthMiddleware::class, PermissionMiddleware::class . ':facturas']);
+
+// Requires write level (estado = 2)
+$router->post('/facturas', [FacturaController::class, 'store'],
+    [AuthMiddleware::class, PermissionMiddleware::class . ':facturas:write']);
+```
+
+A role with `facturas` at read level passes the GET but gets **403** on the
+POST. Without the role↔permission relation, both return 403.
+
+> `PermissionMiddleware` is not wired onto any route by default: the permission
+> taxonomy is defined by each application (it creates the `key`s, seeds them and
+> guards its routes). The framework provides the mechanism, not the keys.
+
+### PermissionChecker
+
+`App\Support\Auth\PermissionChecker` is the single source of truth for
+role→permission resolution. Inject it wherever you need to check permissions
+outside a route:
+
+```php
+$checker->level($rolId, 'facturas');             // 0 | 1 | 2 (effective level)
+$checker->allows($rolId, 'facturas', PermissionChecker::LEVEL_WRITE); // bool
+```
+
+### Admin gate
+
+`AdminMiddleware` does not compare against a fixed role id: it treats as admin
+any role holding the super-permission `Roles::SUPER_PERMISSION`
+(`'Acceso Total'`) in the DB. Impersonation uses the same criterion. To make a
+role an admin, just grant it that permission.
+
+### Role hierarchy
+
+A role can have a parent role (`roles.parent_id`) and **inherits the permissions
+of its entire ancestor chain**. A permission's effective level is the maximum
+between the role itself and its parents (if the parent has `facturas` at write
+level, so does the child, unless the child defines a higher one).
+
+Assign the parent when creating/updating a role via the `Admin` module:
+
+```
+POST /admin/roles          { "nombre": "Analista", "parent_id": 3 }
+PUT  /admin/roles/{id}     { "nombre": "Analista", "estado": 1, "parent_id": 3 }
+```
+
+Setting the role itself or one of its descendants as parent would close a cycle;
+the service detects it and responds **422** (`ValidationException`) without
+persisting.
+
+### Managing roles and permissions
+
+The `Admin` module (routes under `AuthMiddleware + AdminMiddleware`) exposes the CRUD:
+
+```
+GET/POST/PUT  /admin/roles               manage roles (includes parent_id)
+GET/POST/PUT  /admin/permisos            manage permissions (key, descripcion, estado)
+POST/DELETE   /admin/roles/{id}/assign   grant / revoke permissions on a role
+```
+
+---
+
 ## DI Container
 
 PSR-11 compliant with reflection-based autowiring.
@@ -155,7 +242,9 @@ $service = $app->get(MyService::class);
 $service = $app->make(MyService::class);
 
 // Autowire and inject extra scalar params into builtin constructor parameters
-$middleware = $app->makeWith(PermissionMiddleware::class, 'facturas.delete');
+// (PermissionMiddleware: the PermissionChecker is autowired; 'facturas' and
+//  'write' are the permission and level scalars)
+$middleware = $app->makeWith(PermissionMiddleware::class, 'facturas', 'write');
 ```
 
 Autowiring resolves constructor parameters by type name. If no binding exists for a type, it recursively resolves the class. Scalar parameters without defaults throw `ContainerException`. `makeWith` injects additional scalars positionally into builtin-typed parameters — used internally by the Router for parameterized middlewares.
