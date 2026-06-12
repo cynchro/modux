@@ -43,7 +43,10 @@ class AdminController
 
     public function storeRole(StoreRolRequest $validated): Response
     {
-        $id = $this->rolService->create($validated->input('nombre'));
+        $id = $this->rolService->create(
+            $validated->input('nombre'),
+            $this->nullableInt($validated->input('parent_id'))
+        );
 
         return Response::success(['id' => $id], 201);
     }
@@ -52,9 +55,19 @@ class AdminController
     {
         $id = (int) $request->route('id');
 
-        $this->rolService->update($id, $validated->input('nombre'), (int) $validated->input('estado'));
+        $this->rolService->update(
+            $id,
+            $validated->input('nombre'),
+            (int) $validated->input('estado'),
+            $this->nullableInt($validated->input('parent_id'))
+        );
 
         return Response::success(['updated' => true]);
+    }
+
+    private function nullableInt(mixed $value): ?int
+    {
+        return $value === null || $value === '' ? null : (int) $value;
     }
 
     public function assignPermisos(Request $request): Response
